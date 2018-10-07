@@ -11,7 +11,7 @@ import Cocoa
 class ViewController: NSViewController {
     @IBOutlet weak var selectionRectangle : NSView!
     var session: URLSession!
-    var twitterName : String!
+    var name : String!
     var toolTips: [IndexPath: String] = [:]
     var selectionCenter: CGPoint = .zero {
         didSet {
@@ -30,8 +30,9 @@ class ViewController: NSViewController {
     @IBOutlet weak var topImageView: NSImageView!
     let itemId =  NSUserInterfaceItemIdentifier.init("thumb")
     
-    var loader: TwitterLoader!
-    typealias ImageEntity = TwitterImageEntity
+    typealias LoaderType = RedditLoader
+    var loader: LoaderType!
+    typealias ImageEntity = RedditImageEntity
     override func viewDidLoad() {
         super.viewDidLoad()
         let configuration = URLSessionConfiguration.default
@@ -50,8 +51,8 @@ class ViewController: NSViewController {
         bottomCollectionView.allowsMultipleSelection = false
         bottomCollectionView.isSelectable = true
         
-        twitterName = "xufeitop"
-        loader = TwitterLoader(name: twitterName, session: session)
+        name = "pics"
+        loader = LoaderType(name: name, session: session)
         loader.loadFirstPage { (entities: [ImageEntity]) in
             self.imageList = entities
             DispatchQueue.main.async {
@@ -228,9 +229,9 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
             case .image(let image):
                 topImageView.image = image
                 if let toolTip = toolTips[indexPath] {
-                    self.view.window?.title = toolTip
+                    self.view.window?.title = name + ": " + toolTip
                 } else {
-                    self.view.window?.title = "..."
+                    self.view.window?.title = name + ": ..."
                 }
             case .batchPlaceHolder:
                 break

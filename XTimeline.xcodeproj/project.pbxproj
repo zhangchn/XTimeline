@@ -17,6 +17,7 @@
 		DB1B9800216A403F00A417AD /* AbstractEntityAndLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B97FD216A403F00A417AD /* AbstractEntityAndLoader.swift */; };
 		DB1B9801216A403F00A417AD /* ThumbItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B97FE216A403F00A417AD /* ThumbItem.swift */; };
 		DB1B9803216A419000A417AD /* ThumbnailItem.xib in Resources */ = {isa = PBXBuildFile; fileRef = DB1B9802216A419000A417AD /* ThumbnailItem.xib */; };
+		DB1B9805216A502100A417AD /* RedditLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B9804216A502100A417AD /* RedditLoader.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,6 +55,7 @@
 		DB1B97FD216A403F00A417AD /* AbstractEntityAndLoader.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AbstractEntityAndLoader.swift; sourceTree = "<group>"; };
 		DB1B97FE216A403F00A417AD /* ThumbItem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ThumbItem.swift; sourceTree = "<group>"; };
 		DB1B9802216A419000A417AD /* ThumbnailItem.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = ThumbnailItem.xib; sourceTree = "<group>"; };
+		DB1B9804216A502100A417AD /* RedditLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditLoader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +111,7 @@
 				DB1B97FD216A403F00A417AD /* AbstractEntityAndLoader.swift */,
 				DB1B97FE216A403F00A417AD /* ThumbItem.swift */,
 				DB1B97FC216A403E00A417AD /* TwitterLoader.swift */,
+				DB1B9804216A502100A417AD /* RedditLoader.swift */,
 				DB1B97D4216A3F9500A417AD /* Assets.xcassets */,
 				DB1B9802216A419000A417AD /* ThumbnailItem.xib */,
 				DB1B97D6216A3F9500A417AD /* Main.storyboard */,
@@ -269,6 +272,7 @@
 			files = (
 				DB1B97D3216A3F9200A417AD /* ViewController.swift in Sources */,
 				DB1B97D1216A3F9200A417AD /* AppDelegate.swift in Sources */,
+				DB1B9805216A502100A417AD /* RedditLoader.swift in Sources */,
 				DB1B9801216A403F00A417AD /* ThumbItem.swift in Sources */,
 				DB1B97FF216A403F00A417AD /* TwitterLoader.swift in Sources */,
 				DB1B9800216A403F00A417AD /* AbstractEntityAndLoader.swift in Sources */,
