@@ -52,7 +52,7 @@ class ViewController: NSViewController {
         
         twitterName = "xufeitop"
         loader = TwitterLoader(name: twitterName, session: session)
-        loader.loadFirstPage { (entities: [TwitterImageEntity]) in
+        loader.loadFirstPage { (entities: [ImageEntity]) in
             self.imageList = entities
             DispatchQueue.main.async {
                 self.bottomCollectionView!.reloadData()
