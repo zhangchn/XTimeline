@@ -47,12 +47,14 @@ class RedditLoader: EntityLoader {
 
     let name: String
     let session: URLSession
+    let redditSession: URLSession
     let fileManager = FileManager()
     var cacheFunc: ((URL) -> URL?)
 
     init(name: String, session: URLSession) {
         self.name = name
         self.session = session
+        self.redditSession = URLSession(configuration: URLSessionConfiguration.default)
         self.cacheFunc = { (url: URL) -> URL?  in
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
             let fileName = url.lastPathComponent
@@ -116,7 +118,8 @@ class RedditLoader: EntityLoader {
     }
     
     func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
-        let task = session.downloadTask(with: url) { (fileUrl, response, err) in
+        let s = url.host!.hasSuffix(".redd.it") ? redditSession : session
+        let task = s.downloadTask(with: url) { (fileUrl, response, err) in
             if let fileUrl = fileUrl, let _ = NSImage(contentsOf: fileUrl) {
                 if let cacheFileUrl = cacheFileUrl {
                     let fileName = url.lastPathComponent
