@@ -12,6 +12,7 @@ class ViewController: NSViewController {
     @IBOutlet weak var selectionRectangle : NSView!
     var session: URLSession!
     var name : String!
+    var sizeForImage: [URL: CGSize] = [:]
     var toolTips: [IndexPath: String] = [:]
     var selectionCenter: CGPoint = .zero {
         didSet {
@@ -205,11 +206,12 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
         switch imageList[indexPath.item] {
         case .image(let i):
-            let image = NSImage(contentsOf: i)
-            let imageSize = image?.size ?? CGSize(width: 20, height: 20)
-            
-            let height = min(max(collectionView.bounds.height - margin, 20), imageSize.height)
-            let width = height * imageSize.width / imageSize.height
+            let imageSize: CGSize? = sizeForImage[i] ?? NSImage(contentsOf: i)?.size
+            if let s = imageSize {
+                sizeForImage[i] = s
+            }
+            let height = min(max(collectionView.bounds.height - margin, 20), imageSize?.height ?? 20)
+            let width = height * (imageSize?.width ?? 20) / (imageSize?.height ?? 20)
             let size = CGSize(width: width, height: height)
             return size
             
