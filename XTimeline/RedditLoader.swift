@@ -27,7 +27,7 @@ fileprivate func entities(from json: Data, url: URL) -> [RedditImageEntity] {
                 return resolutions.max(by: { $0.width * $0.height < $1.width * $1.height })?.url
             }
             return child.data.preview?.images?.first?.source?.url
-        }).compactMap({URL(string: $0)}).map { RedditImageEntity.placeHolder($0, false) }
+        }).map {$0.replacingOccurrences(of: "&amp;", with: "&") } .compactMap({URL(string: $0)}).map { RedditImageEntity.placeHolder($0, false) }
         
         if let after = doc.data.after {
             let path = url.path
