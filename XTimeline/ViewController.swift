@@ -36,12 +36,14 @@ class ViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         let configuration = URLSessionConfiguration.default
+        configuration.httpMaximumConnectionsPerHost = 3
         configuration.connectionProxyDictionary = [
             kCFNetworkProxiesSOCKSProxy : "127.0.0.1",
             kCFNetworkProxiesSOCKSPort: 1080,
             kCFNetworkProxiesSOCKSEnable: true,
         ]
         session = URLSession(configuration: configuration)
+        
         selectionRectangle.isHidden = true
         selectionRectangle.wantsLayer = true
         selectionRectangle.layer?.borderColor = NSColor.white.withAlphaComponent(0.7).cgColor
@@ -117,8 +119,6 @@ extension ViewController: NSCollectionViewDataSource {
             switch imageList[indexPath.item] {
                 
             case .batchPlaceHolder(let b):
-                
-                //originalEntity.load(session: self.session, cache: self.cacheFunc) { (entities) in
                 originalEntity.load(loader: loader) { (entities) in
                     if entities.count > 1 {
                         var indexPaths = Set<IndexPath>()
@@ -157,12 +157,14 @@ extension ViewController: NSCollectionViewDataSource {
                 default:
                     break
                 }
-            case .image(let i):
-                imageView.image = i
+                imageView.toolTip = "Loading..."
+            case .image(let cacheUrl):
+                imageView.image = NSImage(contentsOf: cacheUrl)
                 imageView.toolTip = self.toolTips[indexPath]
+                
             case .placeHolder(let p):
-                //let originalEntity = imageList[indexPath.item]
-                //originalEntity.load(session: session, cache: self.cacheFunc) { (entities) in
+                self.toolTips[indexPath] = p.0.lastPathComponent
+                imageView.toolTip = self.toolTips[indexPath]
                 originalEntity.load(loader: loader) { (entities) in
                     guard !entities.isEmpty else {
                         self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false)
@@ -171,7 +173,6 @@ extension ViewController: NSCollectionViewDataSource {
                     switch entities.first! {
                     case .image:
                         DispatchQueue.main.async {
-                            self.toolTips[indexPath] = p.0.lastPathComponent
                             self.imageList[indexPath.item] = entities.first!
                             self.bottomCollectionView.reloadItems(at: [indexPath])
                         }
@@ -204,7 +205,8 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
         switch imageList[indexPath.item] {
         case .image(let i):
-            let imageSize = i.size
+            let image = NSImage(contentsOf: i)
+            let imageSize = image?.size ?? CGSize(width: 20, height: 20)
             
             let height = min(max(collectionView.bounds.height - margin, 20), imageSize.height)
             let width = height * imageSize.width / imageSize.height
@@ -227,7 +229,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
             switch imageList[indexPath.item] {
                 
             case .image(let image):
-                topImageView.image = image
+                topImageView.image = NSImage(contentsOf: image)
                 if let toolTip = toolTips[indexPath] {
                     self.view.window?.title = name + ": " + toolTip
                 } else {
