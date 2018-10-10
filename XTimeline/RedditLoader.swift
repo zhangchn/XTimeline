@@ -60,7 +60,7 @@ class RedditLoader: EntityLoader {
         self.cacheFunc = { (url: URL) -> URL?  in
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
             let fileName = url.lastPathComponent
-            if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") {
+            if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
                 let cachePath =  downloadPath + "/reddit/" + name + "/" + fileName
                 return URL(fileURLWithPath: cachePath)
             }
@@ -126,7 +126,7 @@ class RedditLoader: EntityLoader {
             if let fileUrl = fileUrl, let _ = NSImage(contentsOf: fileUrl) {
                 if let cacheFileUrl = cacheFileUrl {
                     let fileName = url.lastPathComponent
-                    if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") {
+                    if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
