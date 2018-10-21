@@ -159,8 +159,10 @@ extension ViewController: NSCollectionViewDataSource {
                     break
                 }
                 imageView.toolTip = "Loading..."
-            case .image(let cacheUrl):
-                imageView.image = NSImage(contentsOf: cacheUrl)
+            case .image(let (_, cacheUrl)):
+                if let cacheUrl = cacheUrl {
+                    imageView.image = NSImage(contentsOf: cacheUrl)
+                }
                 imageView.toolTip = self.toolTips[indexPath]
                 
             case .placeHolder(let p):
@@ -205,16 +207,18 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         let layout = collectionViewLayout as! NSCollectionViewFlowLayout
         let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
         switch imageList[indexPath.item] {
-        case .image(let i):
-            let imageSize: CGSize? = sizeForImage[i] ?? NSImage(contentsOf: i)?.size
-            if let s = imageSize {
-                sizeForImage[i] = s
+        case .image(let (url, cacheUrl)):
+            if let cacheUrl = cacheUrl {
+                let imageSize: CGSize? = sizeForImage[url] ?? NSImage(contentsOf: cacheUrl)?.size
+                if let s = imageSize {
+                    sizeForImage[url] = s
+                }
+                let height = min(max(collectionView.bounds.height - margin, 20), imageSize?.height ?? 20)
+                let width = height * (imageSize?.width ?? 20) / (imageSize?.height ?? 20)
+                let size = NSSize(width: width, height: height)
+                return size
             }
-            let height = min(max(collectionView.bounds.height - margin, 20), imageSize?.height ?? 20)
-            let width = height * (imageSize?.width ?? 20) / (imageSize?.height ?? 20)
-            let size = CGSize(width: width, height: height)
-            return size
-            
+            return CGSize(width: 20, height: 20)
         case .placeHolder, .batchPlaceHolder:
             let height = max(collectionView.bounds.height - margin, 20)
             let size = CGSize(width: height, height: height)
@@ -230,8 +234,12 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         if let indexPath = indexPaths.first {
             switch imageList[indexPath.item] {
                 
-            case .image(let image):
-                topImageView.image = NSImage(contentsOf: image)
+            case .image(let (imageUrl, cacheUrl)):
+                if let cacheUrl = cacheUrl {
+                    topImageView.image = NSImage(contentsOf: cacheUrl)
+                } else {
+                    topImageView.image = NSImage(contentsOf: imageUrl)
+                }
                 if let toolTip = toolTips[indexPath] {
                     self.view.window?.title = name + ": " + toolTip
                 } else {

@@ -9,7 +9,7 @@
 import Cocoa
 
 enum RedditImageEntity {
-    case image(URL)
+    case image(URL, URL?) // URL and cache file URL if exists
     case placeHolder(URL, Bool)
     case batchPlaceHolder(URL, Bool)
 }
@@ -20,7 +20,7 @@ fileprivate func entities(from json: Data, url: URL) -> [RedditImageEntity] {
     
     if let doc = try? decoder.decode(RedditLoader.SubredditPage.self, from: json) {
         var results = doc.data.children.compactMap({ (child) -> String? in
-            if child.data.isRedditMediaDomain, let url = child.data.url, let domain = child.data.domain, domain == "i.redd.it" {
+            if child.data.isRedditMediaDomain, let url = child.data.url, let domain = child.data.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
                 return url
             }
             if let resolutions = child.data.preview?.images?.first?.resolutions {
@@ -109,7 +109,7 @@ class RedditLoader: EntityLoader {
         let data: DataObj
         let url: String?
     }
-    func loadNextBatch(with url: URL, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
+    func loadNextBatch(with url: URL, completion: @escaping ([EntityKind]) -> ()) {
         let task = session.dataTask(with: url) { data, response, err in
             if let data = data {
                 return completion(entities(from: data, url: url))
@@ -121,7 +121,9 @@ class RedditLoader: EntityLoader {
     
     func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
-        let s = url.host!.hasSuffix(".redd.it") ? redditSession : session
+        let useRedditSession = url.host!.hasSuffix(".redd.it") ||
+            url.host!.hasSuffix(".redditmedia.com")
+        let s = useRedditSession ? redditSession : session
         let task = s.downloadTask(with: url) { (fileUrl, response, err) in
             if let fileUrl = fileUrl, let _ = NSImage(contentsOf: fileUrl) {
                 if let cacheFileUrl = cacheFileUrl {
@@ -130,7 +132,7 @@ class RedditLoader: EntityLoader {
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
-                        return completion([EntityKind.image(cacheFileUrl)])
+                        return completion([EntityKind.image(url, cacheFileUrl)])
                     }
                 }
                 //return completion([EntityKind.image(image)])
@@ -144,7 +146,7 @@ class RedditLoader: EntityLoader {
         let cacheFileUrl = cacheFunc(url)
         if let cacheFileUrl = cacheFileUrl {
             if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
-                return EntityKind.image(cacheFileUrl)
+                return EntityKind.image(url, cacheFileUrl)
             }
         }
         return nil
