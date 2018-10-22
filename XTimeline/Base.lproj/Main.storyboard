@@ -702,10 +702,69 @@
             </objects>
             <point key="canvasLocation" x="75" y="250"/>
         </scene>
+        <!--Open View Controller-->
+        <scene sceneID="gfA-Th-9d9">
+            <objects>
+                <viewController id="2nY-Ap-FeK" customClass="OpenViewController" customModule="XTimeline" customModuleProvider="target" sceneMemberID="viewController">
+                    <view key="view" id="tRq-bt-5Pa">
+                        <rect key="frame" x="0.0" y="0.0" width="485" height="119"/>
+                        <autoresizingMask key="autoresizingMask"/>
+                        <subviews>
+                            <textField verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="mKg-RX-tuH">
+                                <rect key="frame" x="144" y="62" width="197" height="22"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMinX="YES" widthSizable="YES" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="N1M-u0-dD8">
+                                    <font key="font" usesAppearanceFont="YES"/>
+                                    <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                                <connections>
+                                    <action selector="textFieldDidChange:" target="2nY-Ap-FeK" id="vFe-GJ-ec5"/>
+                                </connections>
+                            </textField>
+                            <popUpButton verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="Pm9-xg-xaC">
+                                <rect key="frame" x="28" y="59" width="76" height="26"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <popUpButtonCell key="cell" type="push" title="Reddit" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="cgT-so-3jC" id="LRX-fO-1qm">
+                                    <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="menu"/>
+                                    <menu key="menu" id="H40-t5-yge">
+                                        <items>
+                                            <menuItem title="Reddit" state="on" id="cgT-so-3jC"/>
+                                            <menuItem title="TwitterMedia" id="pJs-2o-CCO"/>
+                                        </items>
+                                    </menu>
+                                </popUpButtonCell>
+                            </popUpButton>
+                            <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="kPQ-d7-UXH">
+                                <rect key="frame" x="398" y="55" width="73" height="32"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMinY="YES"/>
+                                <buttonCell key="cell" type="push" title="Open" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="F2e-fP-U0N">
+                                    <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
+                                    <font key="font" metaFont="system"/>
+                                    <string key="keyEquivalent" base64-UTF8="YES">
+DQ
+</string>
+                                </buttonCell>
+                                <connections>
+                                    <action selector="commit:" target="2nY-Ap-FeK" id="xiV-dC-0R1"/>
+                                </connections>
+                            </button>
+                        </subviews>
+                    </view>
+                    <connections>
+                        <outlet property="kindSelector" destination="Pm9-xg-xaC" id="qDU-Wx-GHv"/>
+                        <outlet property="userField" destination="mKg-RX-tuH" id="nul-fD-Nnl"/>
+                    </connections>
+                </viewController>
+                <customObject id="cpG-07-e68" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="683" y="386"/>
+        </scene>
         <!--Thumbnail Item-->
         <scene sceneID="0gc-So-Qsp">
             <objects>
-                <collectionViewItem id="LqS-yb-IId" customClass="ThumbnailItem" customModule="CropperA" customModuleProvider="target" sceneMemberID="viewController">
+                <collectionViewItem id="LqS-yb-IId" customClass="ThumbnailItem" customModule="XTimeline" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" id="8js-iI-7gY">
                         <rect key="frame" x="0.0" y="0.0" width="100" height="100"/>
                         <autoresizingMask key="autoresizingMask"/>
@@ -732,7 +791,7 @@
         <!--View Controller-->
         <scene sceneID="Ahi-cc-KZb">
             <objects>
-                <viewController id="PaO-Cc-a9k" customClass="ViewController" customModule="CropperA" customModuleProvider="target" sceneMemberID="viewController">
+                <viewController id="PaO-Cc-a9k" customClass="ViewController" customModule="XTimeline" customModuleProvider="target" sceneMemberID="viewController">
                     <view key="view" wantsLayer="YES" id="967-4s-fQ6">
                         <rect key="frame" x="0.0" y="0.0" width="480" height="270"/>
                         <autoresizingMask key="autoresizingMask"/>
@@ -748,6 +807,9 @@
                                                 <rect key="frame" x="0.0" y="0.0" width="480" height="199"/>
                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                 <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" id="UfD-vq-Sd1"/>
+                                                <connections>
+                                                    <segue destination="2nY-Ap-FeK" kind="sheet" identifier="open-sheet" id="FjC-R7-LVv"/>
+                                                </connections>
                                             </imageView>
                                             <customView autoresizesSubviews="NO" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="yc1-U9-Ivh">
                                                 <rect key="frame" x="228" y="88" width="24" height="24"/>
@@ -766,7 +828,7 @@
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <subviews>
                                                         <collectionView id="JIW-Ve-fUP">
-                                                            <rect key="frame" x="0.0" y="0.0" width="463" height="45"/>
+                                                            <rect key="frame" x="0.0" y="0.0" width="478" height="59"/>
                                                             <autoresizingMask key="autoresizingMask" heightSizable="YES"/>
                                                             <collectionViewFlowLayout key="collectionViewLayout" minimumInteritemSpacing="10" scrollDirection="horizontal" id="hMN-Qi-QwB">
                                                                 <size key="itemSize" width="50" height="44"/>

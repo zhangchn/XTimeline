@@ -8,8 +8,7 @@
 
 import Cocoa
 
-class TwitterLoader: EntityLoader {
-
+final class TwitterLoader: AbstractImageLoader {
     struct TimeLineSnippet: Codable {
         let minPosition: String
         let hasMoreItems: Bool
@@ -34,7 +33,7 @@ class TwitterLoader: EntityLoader {
             return nil
         }
     }
-    typealias EntityKind = TwitterImageEntity
+    typealias EntityKind = LoadableImageEntity
     
     fileprivate static func imageUrls(from innerHTML: String) -> [URL] {
         let dataImageUrls = matchPattern1(prefix: "data-image-url=\"", suffix: "\"", in: innerHTML)
@@ -60,7 +59,7 @@ class TwitterLoader: EntityLoader {
         return matches
     }
     
-    func loadNextBatch(with url: URL, completion: @escaping ([EntityKind]) ->()) {
+    override func loadNextBatch(with url: URL, completion: @escaping ([EntityKind]) ->()) {
         let task = session.dataTask(with: url) { data, response, err in
             if let data = data, let response = response as? HTTPURLResponse {
                 var isJson = false
@@ -78,14 +77,14 @@ class TwitterLoader: EntityLoader {
                         let timeline = try dec.decode(TimeLineSnippet.self, from: data)
                         let innerHTML = timeline.itemsHtml
                         
-                        var results = TwitterLoader.imageUrls(from: innerHTML).map { TwitterImageEntity.placeHolder($0, false) }
+                        var results = TwitterLoader.imageUrls(from: innerHTML).map { EntityKind.placeHolder($0, false) }
                         
                         if timeline.hasMoreItems {
                             let query = url.query!.components(separatedBy: "&") .map {
                                 $0.starts(with: "max_position=") ? "max_position=\(timeline.minPosition)" : $0
                                 } .joined(separator: "&")
                             let nextUrl = URL(string: "\(url.scheme!)://\(url.host!)\(url.path)?\(query)")!
-                            results.append(TwitterImageEntity.batchPlaceHolder(nextUrl, false))
+                            results.append(EntityKind.batchPlaceHolder(nextUrl, false))
                         }
                         
                         return completion(results)
@@ -99,44 +98,44 @@ class TwitterLoader: EntityLoader {
         }
         task.resume()
     }
-    func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([EntityKind]) ->()) {
+    override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([EntityKind]) ->()) {
         let task = session.downloadTask(with: url) { (fileUrl, response, err) in
-            if let fileUrl = fileUrl, let image = NSImage(contentsOf: fileUrl) {
+            if let fileUrl = fileUrl, let _ = NSImage(contentsOf: fileUrl) {
                 if let cacheFileUrl = cacheFileUrl {
                     let fileName = url.lastPathComponent
                     if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") {
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
+                        return completion([EntityKind.image(url, cacheFileUrl)])
                     }
                 }
-                return completion([TwitterImageEntity.image(image)])
             }
             return completion([])
         }
         task.resume()
     }
-    func loadCachedPlaceHolder(with url: URL) -> EntityKind? {
+    override func loadCachedPlaceHolder(with url: URL) -> EntityKind? {
         let cacheFileUrl = cacheFunc(url)
         if let cacheFileUrl = cacheFileUrl {
-            if fileManager.fileExists(atPath: cacheFileUrl.path), let image = NSImage(contentsOf: cacheFileUrl) {
-                return TwitterImageEntity.image(image)
+            if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
+                return EntityKind.image(url, cacheFileUrl)
             }
         }
         return nil
     }
     
     
-    fileprivate func firstPageEntities(html: String) -> [TwitterImageEntity] {
+    fileprivate func firstPageEntities(html: String) -> [EntityKind] {
         let minId = TwitterLoader.matchPattern1(prefix: "data-min-position=\"", suffix: "\"", in: html).first!
-        var results = TwitterLoader.imageUrls(from: html).map { TwitterImageEntity.placeHolder($0, false) }
+        var results = TwitterLoader.imageUrls(from: html).map { EntityKind.placeHolder($0, false) }
         
         let url = URL(string: "https://twitter.com/i/profiles/show/\(name)/media_timeline?include_available_features=1&include_entities=1&reset_error_state=false&max_position=\(minId)")!
-        results.append(TwitterImageEntity.batchPlaceHolder(url, false))
+        results.append(EntityKind.batchPlaceHolder(url, false))
         return results
     }
  
-    func loadFirstPage(completion: @escaping ([TwitterImageEntity]) -> () ){
+    override func loadFirstPage(completion: @escaping ([EntityKind]) -> () ){
         let firstPageUrl = URL(string: "https://twitter.com/\(name)/media")!
         let task = session.dataTask(with: firstPageUrl) {
             (data, response, error) in
@@ -152,38 +151,7 @@ class TwitterLoader: EntityLoader {
         task.resume()
     }
     
-    func cacheFileUrl(for url: URL) -> URL? {
+    override func cacheFileUrl(for url: URL) -> URL? {
         return self.cacheFunc(url)
-    }
-}
-
-enum TwitterImageEntity {
-    case image(NSImage)
-    case batchPlaceHolder(URL, Bool)
-    case placeHolder(URL, Bool)
-}
-
-extension TwitterImageEntity: EntityType {
-    
-    typealias LoaderType = TwitterLoader
-    func load(loader: LoaderType, completion: @escaping ([TwitterImageEntity]) ->()) {
-        switch self {
-        case .image:
-            return completion([self])
-        case .batchPlaceHolder(let (url, loading)):
-            if loading {
-                return
-            }
-            loader.loadNextBatch(with: url, completion: completion)
-        case .placeHolder(let(url, loading)):
-            if loading {
-                return
-            }
-            let cacheFileUrl = loader.cacheFileUrl(for: url)
-            if let entity = loader.loadCachedPlaceHolder(with: url) {
-                return completion([entity])
-            }
-            loader.loadPlaceHolder(with: url, cacheFileUrl: cacheFileUrl, completion: completion)
-        }
     }
 }

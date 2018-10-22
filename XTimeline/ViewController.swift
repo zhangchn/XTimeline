@@ -31,9 +31,9 @@ class ViewController: NSViewController {
     @IBOutlet weak var topImageView: NSImageView!
     let itemId =  NSUserInterfaceItemIdentifier.init("thumb")
     
-    typealias LoaderType = RedditLoader
+    typealias LoaderType = AbstractImageLoader
     var loader: LoaderType!
-    typealias ImageEntity = RedditImageEntity
+    typealias ImageEntity = LoadableImageEntity
     override func viewDidLoad() {
         super.viewDidLoad()
         let configuration = URLSessionConfiguration.default
@@ -54,8 +54,18 @@ class ViewController: NSViewController {
         bottomCollectionView.allowsMultipleSelection = false
         bottomCollectionView.isSelectable = true
         
-        name = "pics"
-        loader = LoaderType(name: name, session: session)
+    }
+
+    func setUpRedditLoader(name: String) {
+        //name = "petitegonewild"
+        self.name = name
+        let fm = FileManager.default
+        let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/reddit/" + name)
+        if !fm.fileExists(atPath: path) {
+            try! fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+        }
+        
+        loader = RedditLoader(name: name, session: session)
         loader.loadFirstPage { (entities: [ImageEntity]) in
             self.imageList = entities
             DispatchQueue.main.async {
@@ -63,6 +73,31 @@ class ViewController: NSViewController {
             }
         }
     }
+    
+    func setUpTwitterMediaLoader(name: String) {
+        self.name = name
+        let fm = FileManager.default
+        let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/" + name)
+        if !fm.fileExists(atPath: path) {
+            try! fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+        }
+        
+        loader = TwitterLoader(name: name, session: session)
+        loader.loadFirstPage { (entities: [ImageEntity]) in
+            self.imageList = entities
+            DispatchQueue.main.async {
+                self.bottomCollectionView!.reloadData()
+            }
+        }
+    }
+
+    
+    override func prepare(for segue: NSStoryboardSegue, sender: Any?) {
+        if segue.identifier == "open-sheet", let openVC = segue.destinationController as? OpenViewController {
+            openVC.viewController = self
+        }
+    }
+    
     var bottomHeight : CGFloat = 0 {
         didSet {
             bottomCollectionView.collectionViewLayout?.invalidateLayout()
@@ -71,8 +106,14 @@ class ViewController: NSViewController {
     
     override func viewWillAppear() {
         super.viewWillAppear()
+        
         self.view.window?.acceptsMouseMovedEvents = true
         bottomHeight = bottomCollectionView.bounds.height
+        
+        if loader == nil {
+            let identifier = NSStoryboardSegue.Identifier("open-sheet")
+            performSegue(withIdentifier: identifier, sender: nil)
+        }
     }
     
     
@@ -120,7 +161,7 @@ extension ViewController: NSCollectionViewDataSource {
             switch imageList[indexPath.item] {
                 
             case .batchPlaceHolder(let b):
-                originalEntity.load(loader: loader) { (entities) in
+                loader.load(entity: originalEntity) { (entities) in
                     if entities.count > 1 {
                         var indexPaths = Set<IndexPath>()
                         for x in 0..<entities.count {
@@ -168,7 +209,7 @@ extension ViewController: NSCollectionViewDataSource {
             case .placeHolder(let p):
                 self.toolTips[indexPath] = p.0.lastPathComponent
                 imageView.toolTip = self.toolTips[indexPath]
-                originalEntity.load(loader: loader) { (entities) in
+                loader.load(entity: originalEntity) { (entities) in
                     guard !entities.isEmpty else {
                         self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false)
                         return

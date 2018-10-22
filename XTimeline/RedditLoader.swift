@@ -8,13 +8,7 @@
 
 import Cocoa
 
-enum RedditImageEntity {
-    case image(URL, URL?) // URL and cache file URL if exists
-    case placeHolder(URL, Bool)
-    case batchPlaceHolder(URL, Bool)
-}
-
-fileprivate func entities(from json: Data, url: URL) -> [RedditImageEntity] {
+fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
     let decoder = JSONDecoder()
     decoder.keyDecodingStrategy = .convertFromSnakeCase
     
@@ -27,7 +21,7 @@ fileprivate func entities(from json: Data, url: URL) -> [RedditImageEntity] {
                 return resolutions.max(by: { $0.width * $0.height < $1.width * $1.height })?.url
             }
             return child.data.preview?.images?.first?.source?.url
-        }).map {$0.replacingOccurrences(of: "&amp;", with: "&") } .compactMap({URL(string: $0)}).map { RedditImageEntity.placeHolder($0, false) }
+        }).map {$0.replacingOccurrences(of: "&amp;", with: "&") } .compactMap({URL(string: $0)}).map { LoadableImageEntity.placeHolder($0, false) }
         
         if let after = doc.data.after {
             let path = url.path
@@ -35,15 +29,15 @@ fileprivate func entities(from json: Data, url: URL) -> [RedditImageEntity] {
             let host = url.host!
             
             let nextUrl = URL(string: "\(schema)://\(host)\(path)?count=25&after=\(after)")!
-            results.append(RedditImageEntity.batchPlaceHolder(nextUrl, false))
+            results.append(LoadableImageEntity.batchPlaceHolder(nextUrl, false))
         }
         return results
     }
     return []
 }
 
-class RedditLoader: EntityLoader {
-    typealias EntityKind = RedditImageEntity
+final class RedditLoader: AbstractImageLoader {
+    typealias EntityKind = LoadableImageEntity
 
     let name: String
     let session: URLSession
@@ -109,7 +103,7 @@ class RedditLoader: EntityLoader {
         let data: DataObj
         let url: String?
     }
-    func loadNextBatch(with url: URL, completion: @escaping ([EntityKind]) -> ()) {
+    override func loadNextBatch(with url: URL, completion: @escaping ([EntityKind]) -> ()) {
         let task = session.dataTask(with: url) { data, response, err in
             if let data = data {
                 return completion(entities(from: data, url: url))
@@ -119,7 +113,7 @@ class RedditLoader: EntityLoader {
         task.resume()
     }
     
-    func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
+    override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
         let useRedditSession = url.host!.hasSuffix(".redd.it") ||
             url.host!.hasSuffix(".redditmedia.com")
@@ -142,7 +136,7 @@ class RedditLoader: EntityLoader {
         task.resume()
     }
     
-    func loadCachedPlaceHolder(with url: URL) -> EntityKind? {
+    override func loadCachedPlaceHolder(with url: URL) -> EntityKind? {
         let cacheFileUrl = cacheFunc(url)
         if let cacheFileUrl = cacheFileUrl {
             if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
@@ -152,11 +146,11 @@ class RedditLoader: EntityLoader {
         return nil
     }
     
-    func cacheFileUrl(for url: URL) -> URL? {
+    override func cacheFileUrl(for url: URL) -> URL? {
         return self.cacheFunc(url)
     }
     
-    func loadFirstPage(completion: @escaping ([EntityKind]) -> () ){
+    override func loadFirstPage(completion: @escaping ([EntityKind]) -> ()) {
         let firstPageUrl = URL(string: "https://www.reddit.com/r/\(name)/.json")!
         let task = session.dataTask(with: firstPageUrl) {
             (data, response, error) in
@@ -165,30 +159,5 @@ class RedditLoader: EntityLoader {
             }
         }
         task.resume()
-    }
-}
-
-extension RedditImageEntity: EntityType {
-    
-    typealias LoaderType = RedditLoader
-    func load(loader: LoaderType, completion: @escaping ([LoaderType.EntityKind]) ->()) {
-        switch self {
-        case .image:
-            return completion([self])
-        case .batchPlaceHolder(let (url, loading)):
-            if loading {
-                return
-            }
-            loader.loadNextBatch(with: url, completion: completion)
-        case .placeHolder(let(url, loading)):
-            if loading {
-                return
-            }
-            let cacheFileUrl = loader.cacheFileUrl(for: url)
-            if let entity = loader.loadCachedPlaceHolder(with: url) {
-                return completion([entity])
-            }
-            loader.loadPlaceHolder(with: url, cacheFileUrl: cacheFileUrl, completion: completion)
-        }
     }
 }
