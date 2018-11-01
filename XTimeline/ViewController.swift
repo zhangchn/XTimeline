@@ -91,6 +91,21 @@ class ViewController: NSViewController {
         }
     }
 
+    var generation : UInt = 0
+    @IBAction func reload(_ sender: Any) {
+        generation += 1
+        if generation == UInt.max {
+            generation = 0
+        }
+        imageList.removeAll()
+        bottomCollectionView.reloadData()
+        loader.loadFirstPage { (entities: [ImageEntity]) in
+            self.imageList = entities
+            DispatchQueue.main.async {
+                self.bottomCollectionView!.reloadData()
+            }
+        }
+    }
     
     override func prepare(for segue: NSStoryboardSegue, sender: Any?) {
         if segue.identifier == "open-sheet", let openVC = segue.destinationController as? OpenViewController {
@@ -156,12 +171,15 @@ extension ViewController: NSCollectionViewDataSource {
         print("item for indexPath \(indexPath.item)")
         let item = collectionView.makeItem(withIdentifier: itemId, for: indexPath)
         let originalEntity = imageList[indexPath.item]
+        let previousGeneration = generation
         if let imageView = item.imageView {
             imageView.toolTip = nil
             switch imageList[indexPath.item] {
                 
             case .batchPlaceHolder(let b):
+                
                 loader.load(entity: originalEntity) { (entities) in
+                    guard previousGeneration == self.generation else { return }
                     if entities.count > 1 {
                         var indexPaths = Set<IndexPath>()
                         for x in 0..<entities.count {
@@ -169,6 +187,9 @@ extension ViewController: NSCollectionViewDataSource {
                         }
                         let idx = indexPath.item
                         DispatchQueue.main.async {
+                            guard  previousGeneration == self.generation else {
+                                return
+                            }
                             self.bottomCollectionView.performBatchUpdates({
                                 self.imageList.replaceSubrange(idx..<(idx + 1), with: entities)
                                 self.bottomCollectionView.deleteItems(at: [indexPath])
@@ -180,6 +201,9 @@ extension ViewController: NSCollectionViewDataSource {
                         switch entities.first! {
                         case .placeHolder, .image:
                             DispatchQueue.main.async {
+                                guard  previousGeneration == self.generation else {
+                                    return
+                                }
                                 self.imageList[indexPath.item] = entities.first!
                                 self.bottomCollectionView!.reloadItems(at: [indexPath])
                             }
@@ -192,14 +216,18 @@ extension ViewController: NSCollectionViewDataSource {
                         self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
                     }
                 }
+                
+                imageView.image = nil
+                imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, true)
                 switch imageList[indexPath.item] {
                 case .batchPlaceHolder:
                     imageView.image = nil
                     imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, true)
+                    imageView.toolTip = "Loading..."
                 default:
+                    // If cache is hit, the entity could have been changed
                     break
                 }
-                imageView.toolTip = "Loading..."
             case .image(let (_, cacheUrl)):
                 if let cacheUrl = cacheUrl {
                     imageView.image = NSImage(contentsOf: cacheUrl)
@@ -210,6 +238,9 @@ extension ViewController: NSCollectionViewDataSource {
                 self.toolTips[indexPath] = p.0.lastPathComponent
                 imageView.toolTip = self.toolTips[indexPath]
                 loader.load(entity: originalEntity) { (entities) in
+                    guard  previousGeneration == self.generation else {
+                        return
+                    }
                     guard !entities.isEmpty else {
                         self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false)
                         return
@@ -217,6 +248,9 @@ extension ViewController: NSCollectionViewDataSource {
                     switch entities.first! {
                     case .image:
                         DispatchQueue.main.async {
+                            guard  previousGeneration == self.generation else {
+                                return
+                            }
                             self.imageList[indexPath.item] = entities.first!
                             self.bottomCollectionView.reloadItems(at: [indexPath])
                         }

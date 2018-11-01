@@ -99,9 +99,9 @@
                                                 <action selector="saveDocumentAs:" target="Ady-hI-5gd" id="mDf-zr-I0C"/>
                                             </connections>
                                         </menuItem>
-                                        <menuItem title="Revert to Saved" keyEquivalent="r" id="KaW-ft-85H">
+                                        <menuItem title="Reload" keyEquivalent="r" id="8wz-Ub-HhH">
                                             <connections>
-                                                <action selector="revertDocumentToSaved:" target="Ady-hI-5gd" id="iJ3-Pv-kwq"/>
+                                                <action selector="reload:" target="Ady-hI-5gd" id="Yf5-pY-gHX"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="aJh-i4-bef"/>
@@ -824,11 +824,11 @@ DQ
                                             <scrollView wantsLayer="YES" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" hasVerticalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="99p-GE-9TI">
                                                 <rect key="frame" x="0.0" y="0.0" width="480" height="61"/>
                                                 <clipView key="contentView" drawsBackground="NO" id="Qy1-Ep-LfD">
-                                                    <rect key="frame" x="1" y="1" width="478" height="59"/>
+                                                    <rect key="frame" x="1" y="1" width="478" height="48"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <subviews>
                                                         <collectionView id="JIW-Ve-fUP">
-                                                            <rect key="frame" x="0.0" y="0.0" width="478" height="59"/>
+                                                            <rect key="frame" x="0.0" y="0.0" width="478" height="48"/>
                                                             <autoresizingMask key="autoresizingMask" heightSizable="YES"/>
                                                             <collectionViewFlowLayout key="collectionViewLayout" minimumInteritemSpacing="10" scrollDirection="horizontal" id="hMN-Qi-QwB">
                                                                 <size key="itemSize" width="50" height="44"/>
@@ -843,7 +843,7 @@ DQ
                                                     <edgeInsets key="contentInsets" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
                                                 </clipView>
                                                 <scroller key="horizontalScroller" verticalHuggingPriority="750" controlSize="mini" horizontal="YES" id="rRf-M8-smV">
-                                                    <rect key="frame" x="1" y="46" width="478" height="14"/>
+                                                    <rect key="frame" x="1" y="49" width="478" height="11"/>
                                                     <autoresizingMask key="autoresizingMask"/>
                                                 </scroller>
                                                 <scroller key="verticalScroller" hidden="YES" verticalHuggingPriority="750" horizontal="NO" id="5lU-4J-Qld">
