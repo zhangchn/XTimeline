@@ -14,10 +14,19 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
     
     if let doc = try? decoder.decode(RedditLoader.SubredditPage.self, from: json) {
         var results = doc.data.children.compactMap({ (child) -> String? in
-            if child.data.isRedditMediaDomain, let url = child.data.url, let domain = child.data.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
+            let d = child.data
+            if d.isRedditMediaDomain, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
                 return url
             }
-            if let resolutions = child.data.preview?.images?.first?.resolutions {
+            if let videoPreview = d.preview?.redditVideoPreview {
+                if let scrubberUrl = videoPreview.scrubberMediaUrl {
+                    return scrubberUrl
+                }
+                if let fallbackUrl = videoPreview.fallbackUrl {
+                    return fallbackUrl
+                }
+            }
+            if let resolutions = d.preview?.images?.first?.resolutions {
                 return resolutions.max(by: { $0.width * $0.height < $1.width * $1.height })?.url
             }
             return child.data.preview?.images?.first?.source?.url
@@ -55,7 +64,11 @@ final class RedditLoader: AbstractImageLoader {
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
             let fileName = url.lastPathComponent
             if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
-                let cachePath =  downloadPath + "/reddit/" + name + "/" + fileName
+                let cachePath = downloadPath + "/reddit/" + name + "/" + fileName
+                return URL(fileURLWithPath: cachePath)
+            }
+            if url.host?.contains("v.redd.it") ?? false {
+                let cachePath = downloadPath + "/reddit/" + name + url.pathComponents.joined(separator: "_") + ".mp4"
                 return URL(fileURLWithPath: cachePath)
             }
             return nil
@@ -63,9 +76,22 @@ final class RedditLoader: AbstractImageLoader {
     }
     struct SubredditPage : Codable {
         let kind: String
+        struct Media: Codable {
+            struct Embed: Codable {
+                let providerUrl: String
+                let description: String
+                let title: String
+                let thumbnailUrl: String
+                let html: String
+                let type: String
+            }
+            let type: String
+            let oembed: Embed
+        }
         struct VideoPreview: Codable {
-            let fallback_url: String?
-            let hls_url: String?
+            let fallbackUrl: String?
+            let scrubberMediaUrl: String?
+            let hlsUrl: String?
             let duration: Int?
         }
         struct Preview: Codable {
@@ -92,6 +118,7 @@ final class RedditLoader: AbstractImageLoader {
                 let url: String?
                 let domain: String?
                 let isRedditMediaDomain: Bool
+                let media: Media?
             }
             let data: ChildData
         }
@@ -118,17 +145,42 @@ final class RedditLoader: AbstractImageLoader {
         let useRedditSession = url.host!.hasSuffix(".redd.it") ||
             url.host!.hasSuffix(".redditmedia.com")
         let s = useRedditSession ? redditSession : session
+        let fileName = url.lastPathComponent
         let task = s.downloadTask(with: url) { (fileUrl, response, err) in
-            if let fileUrl = fileUrl, let _ = NSImage(contentsOf: fileUrl) {
-                if let cacheFileUrl = cacheFileUrl {
-                    let fileName = url.lastPathComponent
-                    if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
+            if let fileUrl = fileUrl, let cacheFileUrl = cacheFileUrl {
+                let contentType = (response as! HTTPURLResponse).allHeaderFields["Content-Type"] as? String
+                print("did fetch: \(url); " + (contentType.map { "type: " + $0 } ?? ""))
+                switch contentType {
+                case "image/jpeg", "image/png", "image/gif":
+                    if let _ = NSImage(contentsOf: fileUrl) {
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
                         return completion([EntityKind.image(url, cacheFileUrl)])
                     }
+                case "video/mp4":
+                    if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                        try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                    }
+                    return completion([EntityKind.image(url, cacheFileUrl)])
+                default:
+                    break
                 }
+                /*
+                if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".gif"),
+                    let _ = NSImage(contentsOf: fileUrl) {
+                    if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                        try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                    }
+                    return completion([EntityKind.image(url, cacheFileUrl)])
+                }
+                if contentType?.contains("video/mp4") ?? false {
+                    if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                        try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                    }
+                    return completion([EntityKind.image(url, cacheFileUrl)])
+                }
+                */
                 //return completion([EntityKind.image(image)])
             }
             return completion([])
