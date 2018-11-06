@@ -153,8 +153,7 @@ final class RedditLoader: AbstractImageLoader {
     
     override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
-        let useRedditSession = (url.host!.hasSuffix(".redd.it") &&
-            !url.host!.hasSuffix("v.redd.it")) ||
+        let useRedditSession = url.host!.hasSuffix(".redd.it") ||
             url.host!.hasSuffix(".redditmedia.com")
         let s = useRedditSession ? redditSession : session
         //let fileName = url.lastPathComponent
