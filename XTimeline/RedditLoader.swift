@@ -153,11 +153,15 @@ final class RedditLoader: AbstractImageLoader {
     
     override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
-        let useRedditSession = url.host!.hasSuffix(".redd.it") ||
+        let useRedditSession = (url.host!.hasSuffix(".redd.it") &&
+            !url.host!.hasSuffix("v.redd.it")) ||
             url.host!.hasSuffix(".redditmedia.com")
-        let s = session// useRedditSession ? redditSession : session
+        let s = useRedditSession ? redditSession : session
         //let fileName = url.lastPathComponent
         let task = s.downloadTask(with: url) { (fileUrl, response, err) in
+            if let err = err {
+                print("error loading \(url.absoluteString): \(err.localizedDescription)")
+            }
             if let fileUrl = fileUrl, let cacheFileUrl = cacheFileUrl {
                 let contentType = (response as! HTTPURLResponse).allHeaderFields["Content-Type"] as? String
                 print("did fetch: \(url); " + (contentType.map { "type: " + $0 } ?? ""))
