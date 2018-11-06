@@ -7,6 +7,7 @@
 //
 
 import Cocoa
+import AVFoundation
 
 fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
     let decoder = JSONDecoder()
@@ -16,6 +17,14 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
         var results = doc.data.children.compactMap({ (child) -> String? in
             let d = child.data
             if d.isRedditMediaDomain, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
+                if domain.hasSuffix("v.redd.it"), let videoPreview = d.media?.redditVideo {
+                    if let scrubberUrl = videoPreview.scrubberMediaUrl {
+                        return scrubberUrl
+                    }
+                    if let fallbackUrl = videoPreview.fallbackUrl {
+                        return fallbackUrl
+                    }
+                }
                 return url
             }
             if let videoPreview = d.preview?.redditVideoPreview {
@@ -85,8 +94,10 @@ final class RedditLoader: AbstractImageLoader {
                 let html: String
                 let type: String
             }
-            let type: String
-            let oembed: Embed
+            
+            let type: String?
+            let oembed: Embed?
+            let redditVideo: VideoPreview?
         }
         struct VideoPreview: Codable {
             let fallbackUrl: String?
@@ -144,8 +155,8 @@ final class RedditLoader: AbstractImageLoader {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
         let useRedditSession = url.host!.hasSuffix(".redd.it") ||
             url.host!.hasSuffix(".redditmedia.com")
-        let s = useRedditSession ? redditSession : session
-        let fileName = url.lastPathComponent
+        let s = session// useRedditSession ? redditSession : session
+        //let fileName = url.lastPathComponent
         let task = s.downloadTask(with: url) { (fileUrl, response, err) in
             if let fileUrl = fileUrl, let cacheFileUrl = cacheFileUrl {
                 let contentType = (response as! HTTPURLResponse).allHeaderFields["Content-Type"] as? String
@@ -159,10 +170,33 @@ final class RedditLoader: AbstractImageLoader {
                         return completion([EntityKind.image(url, cacheFileUrl)])
                     }
                 case "video/mp4":
+                    
                     if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                        
                         try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                        let asset = AVAsset(url: cacheFileUrl)
+                        asset.loadValuesAsynchronously(forKeys: ["playable"], completionHandler: {
+                            switch asset.statusOfValue(forKey: "playable", error: nil) {
+                            case .loaded:
+                                let igen = AVAssetImageGenerator(asset: asset)
+                                let time = CMTime(seconds: asset.duration.seconds * 0.33, preferredTimescale: asset.duration.timescale)
+                                let videoThumb = URL(fileURLWithPath: cacheFileUrl.path).appendingPathExtension("vthumb")
+                                
+                                if let image = try? igen.copyCGImage(at: time, actualTime: nil),
+                                    let dest = CGImageDestinationCreateWithURL(videoThumb as CFURL, kUTTypePNG, 1, nil) {
+                                    CGImageDestinationAddImage(dest, image, nil)
+                                    CGImageDestinationFinalize(dest)
+                                }
+                                return completion([EntityKind.image(url, cacheFileUrl)])
+                            case .failed:
+                                return completion([EntityKind.image(url, cacheFileUrl)])
+                            default:
+                                break
+                            }
+                        })
+                    } else {
+                        return completion([EntityKind.image(url, cacheFileUrl)])
                     }
-                    return completion([EntityKind.image(url, cacheFileUrl)])
                 default:
                     break
                 }

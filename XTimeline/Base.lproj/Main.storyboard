@@ -2,6 +2,7 @@
 <document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="14313.18" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
         <deployment identifier="macosx"/>
+        <plugIn identifier="com.apple.AVKitIBPlugin" version="14313.18"/>
         <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14313.18"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -815,6 +816,10 @@ DQ
                                                 <rect key="frame" x="228" y="88" width="24" height="24"/>
                                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             </customView>
+                                            <avPlayerView hidden="YES" fixedFrame="YES" controlsStyle="inline" translatesAutoresizingMaskIntoConstraints="NO" id="qHZ-sX-0Yw">
+                                                <rect key="frame" x="0.0" y="0.0" width="480" height="199"/>
+                                                <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                                            </avPlayerView>
                                         </subviews>
                                     </customView>
                                     <customView id="L2u-ro-Ty9">
@@ -823,7 +828,7 @@ DQ
                                         <subviews>
                                             <scrollView wantsLayer="YES" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" hasVerticalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="99p-GE-9TI">
                                                 <rect key="frame" x="0.0" y="0.0" width="480" height="61"/>
-                                                <clipView key="contentView" drawsBackground="NO" id="Qy1-Ep-LfD">
+                                                <clipView key="contentView" id="Qy1-Ep-LfD">
                                                     <rect key="frame" x="1" y="1" width="478" height="48"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <subviews>
@@ -880,6 +885,7 @@ DQ
                         <outlet property="bottomCollectionView" destination="JIW-Ve-fUP" id="eOk-sB-bOw"/>
                         <outlet property="selectionRectangle" destination="yc1-U9-Ivh" id="eBk-mT-yM0"/>
                         <outlet property="topImageView" destination="f3u-vm-2cE" id="skG-1h-EMz"/>
+                        <outlet property="topPlayerView" destination="qHZ-sX-0Yw" id="iLH-uu-BJ4"/>
                     </connections>
                 </viewController>
                 <customObject id="2S7-78-Jqp" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>

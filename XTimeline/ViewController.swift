@@ -7,6 +7,8 @@
 //
 
 import Cocoa
+import AVFoundation
+import AVKit
 
 class ViewController: NSViewController {
     @IBOutlet weak var selectionRectangle : NSView!
@@ -29,6 +31,7 @@ class ViewController: NSViewController {
     //@IBOutlet weak var topScrollView: NSScrollView!
     @IBOutlet weak var bottomCollectionView: NSCollectionView!
     @IBOutlet weak var topImageView: NSImageView!
+    @IBOutlet weak var topPlayerView: AVPlayerView!
     let itemId =  NSUserInterfaceItemIdentifier.init("thumb")
     
     typealias LoaderType = AbstractImageLoader
@@ -230,7 +233,14 @@ extension ViewController: NSCollectionViewDataSource {
                 }
             case .image(let (_, cacheUrl)):
                 if let cacheUrl = cacheUrl {
-                    imageView.image = NSImage(contentsOf: cacheUrl)
+                    if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
+                        let thumbUrl = cacheUrl.appendingPathExtension("vthumb")
+                        if let thumbnail = NSImage(contentsOf: thumbUrl) {
+                            imageView.image = thumbnail
+                        }
+                    } else {
+                        imageView.image = NSImage(contentsOf: cacheUrl)
+                    }
                 }
                 imageView.toolTip = self.toolTips[indexPath]
                 
@@ -284,7 +294,14 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         switch imageList[indexPath.item] {
         case .image(let (url, cacheUrl)):
             if let cacheUrl = cacheUrl {
-                let imageSize: CGSize? = sizeForImage[url] ?? NSImage(contentsOf: cacheUrl)?.size
+                let imageSize: CGSize?
+                if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
+                    let thumbUrl = cacheUrl.appendingPathExtension("vthumb")
+                    let thumbSize = sizeForImage[url] ?? NSImage(contentsOf: thumbUrl)?.size
+                    imageSize = thumbSize
+                } else {
+                    imageSize = sizeForImage[url] ?? NSImage(contentsOf: cacheUrl)?.size
+                }
                 if let s = imageSize {
                     sizeForImage[url] = s
                 }
@@ -311,7 +328,15 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 
             case .image(let (imageUrl, cacheUrl)):
                 if let cacheUrl = cacheUrl {
-                    topImageView.image = NSImage(contentsOf: cacheUrl)
+                    if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
+                        topPlayerView.isHidden = false
+                        topPlayerView.player = AVPlayer(url: cacheUrl)
+                        topPlayerView.player?.play()
+                    } else {
+                        topPlayerView.player?.pause()
+                        topPlayerView.isHidden = true
+                        topImageView.image = NSImage(contentsOf: cacheUrl)
+                    }
                 } else {
                     topImageView.image = NSImage(contentsOf: imageUrl)
                 }
