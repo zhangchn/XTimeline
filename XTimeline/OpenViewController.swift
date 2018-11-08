@@ -22,5 +22,9 @@ class OpenViewController : NSViewController {
         viewController.dismiss(self)
     }
     
+    override func dismiss(_ sender: Any?) {
+        super.dismiss(sender)
+        self.viewController.close()
+    }
 }
 

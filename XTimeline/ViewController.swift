@@ -94,6 +94,9 @@ class ViewController: NSViewController {
         }
     }
 
+    func close() {
+        self.view.window?.close()
+    }
     var generation : UInt = 0
     @IBAction func reload(_ sender: Any) {
         generation += 1
