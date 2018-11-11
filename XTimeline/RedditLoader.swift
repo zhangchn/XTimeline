@@ -18,21 +18,15 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
             let d = child.data
             if d.isRedditMediaDomain, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
                 if domain.hasSuffix("v.redd.it"), let videoPreview = d.media?.redditVideo {
-                    if let scrubberUrl = videoPreview.scrubberMediaUrl {
-                        return scrubberUrl
-                    }
-                    if let fallbackUrl = videoPreview.fallbackUrl {
-                        return fallbackUrl
+                    if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
+                        return url
                     }
                 }
                 return url
             }
             if let videoPreview = d.preview?.redditVideoPreview {
-                if let scrubberUrl = videoPreview.scrubberMediaUrl {
-                    return scrubberUrl
-                }
-                if let fallbackUrl = videoPreview.fallbackUrl {
-                    return fallbackUrl
+                if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
+                    return url
                 }
             }
             if let resolutions = d.preview?.images?.first?.resolutions {
