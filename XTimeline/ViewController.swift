@@ -163,6 +163,16 @@ class ViewController: NSViewController {
         }
         selectionSize = max(min(1024, selectionSize + amount), 24)
     }
+    
+    override func moveToBeginningOfLine(_ sender: Any?) {
+        // Ctrl + left
+        bottomCollectionView.scrollToItems(at: [IndexPath(item: 0, section: 0)], scrollPosition: .left)
+    }
+    
+    override func moveToBeginningOfDocument(_ sender: Any?) {
+        // CMD + up
+        bottomCollectionView.selectItems(at: [IndexPath(item: 0, section: 0)], scrollPosition: .left)
+    }
 }
 
 extension ViewController: NSCollectionViewDataSource {
