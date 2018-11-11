@@ -65,7 +65,16 @@ class ViewController: NSViewController {
         let fm = FileManager.default
         let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/reddit/" + name)
         if !fm.fileExists(atPath: path) {
-            try! fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+            do {
+                try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+            } catch let err {
+                let alert = NSAlert(error: err)
+                alert.beginSheetModal(for: self.view.window!) { (resp) in
+                    self.view.window?.close()
+                    return
+                }
+                return
+            }
         }
         
         loader = RedditLoader(name: name, session: session)
@@ -82,7 +91,16 @@ class ViewController: NSViewController {
         let fm = FileManager.default
         let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/" + name)
         if !fm.fileExists(atPath: path) {
-            try! fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+            do {
+                try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+            } catch let err {
+                let alert = NSAlert(error: err)
+                alert.beginSheetModal(for: self.view.window!) { (resp) in
+                    self.view.window?.close()
+                    return
+                }
+                return
+            }
         }
         
         loader = TwitterLoader(name: name, session: session)
