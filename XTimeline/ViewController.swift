@@ -62,6 +62,7 @@ class ViewController: NSViewController {
     func setUpRedditLoader(name: String) {
         //name = "petitegonewild"
         self.name = name
+        self.view.window?.title = name
         let fm = FileManager.default
         let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/reddit/" + name)
         if !fm.fileExists(atPath: path) {
@@ -88,6 +89,7 @@ class ViewController: NSViewController {
     
     func setUpTwitterMediaLoader(name: String) {
         self.name = name
+        self.view.window?.title = name
         let fm = FileManager.default
         let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/" + name)
         if !fm.fileExists(atPath: path) {
@@ -276,7 +278,7 @@ extension ViewController: NSCollectionViewDataSource {
                 imageView.toolTip = self.toolTips[indexPath]
                 
             case .placeHolder(let p):
-                self.toolTips[indexPath] = p.0.lastPathComponent
+                self.toolTips[indexPath] = p.0.host?.contains("v.redd.it") ?? false ? p.0.path : p.0.lastPathComponent
                 imageView.toolTip = self.toolTips[indexPath]
                 loader.load(entity: originalEntity) { (entities) in
                     guard  previousGeneration == self.generation else {
