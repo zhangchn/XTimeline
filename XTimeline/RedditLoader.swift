@@ -222,6 +222,11 @@ final class RedditLoader: AbstractImageLoader {
     override func loadCachedPlaceHolder(with url: URL) -> EntityKind? {
         let cacheFileUrl = cacheFunc(url)
         if let cacheFileUrl = cacheFileUrl {
+            if cacheFileUrl.pathExtension == "mp4" {
+                if fileManager.fileExists(atPath: cacheFileUrl.path) {
+                    return EntityKind.image(url, cacheFileUrl)
+                }
+            }
             if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
                 return EntityKind.image(url, cacheFileUrl)
             }
