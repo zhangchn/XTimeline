@@ -368,7 +368,13 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                     } else {
                         topPlayerView.player?.pause()
                         topPlayerView.isHidden = true
-                        topImageView.image = NSImage(contentsOf: cacheUrl)
+                        if let image = NSImage(contentsOf: cacheUrl) {
+                            topImageView.image = image
+                            if cacheUrl.pathExtension == "gif" {
+                                topImageView.canDrawSubviewsIntoLayer = true
+                                topImageView.animates = true
+                            }
+                        }
                     }
                 } else {
                     topImageView.image = NSImage(contentsOf: imageUrl)
