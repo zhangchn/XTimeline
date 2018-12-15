@@ -27,8 +27,14 @@ final class TwitterLoader: AbstractImageLoader {
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
             let fileName = url.lastPathComponent
             if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") {
-                let cachePath =  downloadPath + "/" + name + "/" + fileName
-                return URL(fileURLWithPath: cachePath)
+                let fm = FileManager()
+                if fm.fileExists(atPath: downloadPath + "/twmedia/.external/" + name) {
+                    let cachePath =  downloadPath + "/twmedia/.external/" + name + "/" + fileName
+                    return URL(fileURLWithPath: cachePath)
+                } else {
+                    let cachePath =  downloadPath + "/twmedia/" + name + "/" + fileName
+                    return URL(fileURLWithPath: cachePath)
+                }
             }
             return nil
         }

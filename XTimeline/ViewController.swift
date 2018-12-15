@@ -68,20 +68,32 @@ class ViewController: NSViewController {
         self.name = name
         self.view.window?.title = name
         let fm = FileManager.default
-        let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/reddit/" + name)
-        if !fm.fileExists(atPath: path) {
+        let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+        var created = fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name)
+        if !created {
+            let dest = downloadPath + "/reddit/.external/" + name
             do {
-                try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
-            } catch let err {
-                let alert = NSAlert(error: err)
-                alert.beginSheetModal(for: self.view.window!) { (resp) in
-                    self.view.window?.close()
-                    return
-                }
-                return
+                try fm.createDirectory(atPath: dest, withIntermediateDirectories: false, attributes: nil)
+                created = true
+            } catch _ {
+                
             }
         }
-        
+        if !created {
+            let path = downloadPath.appending("/reddit/" + name)
+            if !fm.fileExists(atPath: path) {
+                do {
+                    try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+                } catch let err {
+                    let alert = NSAlert(error: err)
+                    alert.beginSheetModal(for: self.view.window!) { (resp) in
+                        self.view.window?.close()
+                        return
+                    }
+                    return
+                }
+            }
+        }
         loader = RedditLoader(name: name, session: session)
         loader.loadFirstPage { (entities: [ImageEntity]) in
             self.imageList = entities
@@ -95,17 +107,30 @@ class ViewController: NSViewController {
         self.name = name
         self.view.window?.title = name
         let fm = FileManager.default
-        let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/" + name)
-        if !fm.fileExists(atPath: path) {
+        let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+        var created = fm.fileExists(atPath: downloadPath + "/twmedia/.external/" + name)
+        if !created {
+            let dest = downloadPath + "/twmedia/.external/" + name
             do {
-                try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
-            } catch let err {
-                let alert = NSAlert(error: err)
-                alert.beginSheetModal(for: self.view.window!) { (resp) in
-                    self.view.window?.close()
+                try fm.createDirectory(atPath: dest, withIntermediateDirectories: false, attributes: nil)
+                created = true
+            } catch _ {
+                
+            }
+        }
+        if !created {
+            let path = downloadPath.appending("/twmedia/" + name)
+            if !fm.fileExists(atPath: path) {
+                do {
+                    try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+                } catch let err {
+                    let alert = NSAlert(error: err)
+                    alert.beginSheetModal(for: self.view.window!) { (resp) in
+                        self.view.window?.close()
+                        return
+                    }
                     return
                 }
-                return
             }
         }
         
