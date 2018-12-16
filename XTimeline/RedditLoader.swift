@@ -12,11 +12,11 @@ import AVFoundation
 fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
     let decoder = JSONDecoder()
     decoder.keyDecodingStrategy = .convertFromSnakeCase
-    
-    if let doc = try? decoder.decode(RedditLoader.SubredditPage.self, from: json) {
+    do {
+        let doc = try decoder.decode(RedditLoader.SubredditPage.self, from: json)
         var results = doc.data.children.compactMap({ (child) -> String? in
             let d = child.data
-            if d.isRedditMediaDomain, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
+            if d.isRedditMediaDomain ?? false, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
                 if domain.hasSuffix("v.redd.it"), let videoPreview = d.media?.redditVideo {
                     if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
                         return url
@@ -44,6 +44,9 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
             results.append(LoadableImageEntity.batchPlaceHolder(nextUrl, false))
         }
         return results
+        
+    } catch let err {
+        print(err)
     }
     return []
 }
@@ -81,12 +84,12 @@ final class RedditLoader: AbstractImageLoader {
         let kind: String
         struct Media: Codable {
             struct Embed: Codable {
-                let providerUrl: String
-                let description: String
-                let title: String
-                let thumbnailUrl: String
-                let html: String
-                let type: String
+                let providerUrl: String?
+                let description: String?
+                let title: String?
+                let thumbnailUrl: String?
+                let html: String?
+                let type: String?
             }
             
             let type: String?
@@ -122,7 +125,7 @@ final class RedditLoader: AbstractImageLoader {
                 let preview: Preview?
                 let url: String?
                 let domain: String?
-                let isRedditMediaDomain: Bool
+                let isRedditMediaDomain: Bool?
                 let media: Media?
             }
             let data: ChildData
