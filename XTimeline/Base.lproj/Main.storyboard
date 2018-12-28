@@ -736,7 +736,7 @@
                                 </popUpButtonCell>
                             </popUpButton>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="kPQ-d7-UXH">
-                                <rect key="frame" x="394" y="56" width="73" height="32"/>
+                                <rect key="frame" x="385" y="56" width="82" height="32"/>
                                 <buttonCell key="cell" type="push" title="Open" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="F2e-fP-U0N">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -749,7 +749,7 @@ DQ
                                 </connections>
                             </button>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="HnX-De-gKV">
-                                <rect key="frame" x="394" y="23" width="82" height="32"/>
+                                <rect key="frame" x="385" y="23" width="82" height="32"/>
                                 <buttonCell key="cell" type="push" title="Cancel" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="87v-mP-K9i">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -765,12 +765,12 @@ Gw
                         <constraints>
                             <constraint firstItem="Pm9-xg-xaC" firstAttribute="leading" secondItem="tRq-bt-5Pa" secondAttribute="leading" constant="30" id="0Oe-1m-l9l"/>
                             <constraint firstItem="mKg-RX-tuH" firstAttribute="leading" secondItem="Pm9-xg-xaC" secondAttribute="trailing" constant="43" id="Gym-53-Urq"/>
-                            <constraint firstItem="HnX-De-gKV" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="kPQ-d7-UXH" secondAttribute="leading" id="Jw0-9k-JG2"/>
+                            <constraint firstItem="HnX-De-gKV" firstAttribute="leading" secondItem="kPQ-d7-UXH" secondAttribute="leading" id="Jw0-9k-JG2"/>
+                            <constraint firstItem="HnX-De-gKV" firstAttribute="trailing" secondItem="kPQ-d7-UXH" secondAttribute="trailing" id="RJV-ax-KYa"/>
                             <constraint firstItem="Pm9-xg-xaC" firstAttribute="top" secondItem="tRq-bt-5Pa" secondAttribute="top" constant="35" id="Rs8-c6-e2q"/>
                             <constraint firstItem="kPQ-d7-UXH" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="mKg-RX-tuH" secondAttribute="trailing" constant="8" symbolic="YES" id="Uhv-tp-Uvd"/>
                             <constraint firstItem="Pm9-xg-xaC" firstAttribute="firstBaseline" secondItem="kPQ-d7-UXH" secondAttribute="baseline" id="Wfs-ET-s4K"/>
-                            <constraint firstAttribute="trailing" secondItem="kPQ-d7-UXH" secondAttribute="trailing" constant="24" id="Yqi-4w-L0l"/>
-                            <constraint firstAttribute="trailing" secondItem="HnX-De-gKV" secondAttribute="trailing" constant="15" id="e7V-EG-B1I"/>
+                            <constraint firstAttribute="trailing" secondItem="kPQ-d7-UXH" secondAttribute="trailing" constant="24" id="fKd-xJ-irr"/>
                             <constraint firstItem="HnX-De-gKV" firstAttribute="top" secondItem="kPQ-d7-UXH" secondAttribute="bottom" constant="12" symbolic="YES" id="gl3-M4-ZY3"/>
                             <constraint firstItem="Pm9-xg-xaC" firstAttribute="firstBaseline" secondItem="mKg-RX-tuH" secondAttribute="baseline" id="jdi-1z-1iQ"/>
                             <constraint firstItem="Pm9-xg-xaC" firstAttribute="bottom" secondItem="mKg-RX-tuH" secondAttribute="bottom" id="ufs-yg-1Wv"/>

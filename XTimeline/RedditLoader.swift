@@ -16,6 +16,9 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
         let doc = try decoder.decode(RedditLoader.SubredditPage.self, from: json)
         var results = doc.data.children.compactMap({ (child) -> String? in
             let d = child.data
+            if d.isSelf ?? false {
+                return nil
+            }
             if d.isRedditMediaDomain ?? false, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
                 if domain.hasSuffix("v.redd.it"), let videoPreview = d.media?.redditVideo {
                     if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
@@ -126,6 +129,7 @@ final class RedditLoader: AbstractImageLoader {
                 let url: String?
                 let domain: String?
                 let isRedditMediaDomain: Bool?
+                let isSelf: Bool?
                 let media: Media?
             }
             let data: ChildData
