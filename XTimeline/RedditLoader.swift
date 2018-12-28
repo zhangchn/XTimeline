@@ -14,7 +14,7 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
     decoder.keyDecodingStrategy = .convertFromSnakeCase
     do {
         let doc = try decoder.decode(RedditLoader.SubredditPage.self, from: json)
-        var results = doc.data.children.compactMap({ (child) -> String? in
+        var results = doc.data.children.compactMap({ (child) -> (String, RedditLoader.SubredditPage.Child.ChildData)? in
             let d = child.data
             if d.isSelf ?? false {
                 return nil
@@ -22,21 +22,39 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
             if d.isRedditMediaDomain ?? false, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
                 if domain.hasSuffix("v.redd.it"), let videoPreview = d.media?.redditVideo {
                     if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
-                        return url
+                        return (url, d)
                     }
                 }
-                return url
+                return (url, d)
+            }
+            if let media = d.media, let tn = media.oembed?.thumbnailUrl {
+                if tn.hasPrefix("https://i.imgur.com/"), tn.hasSuffix(".jpg?fbplay") {
+                    let url = tn.replacingOccurrences(of: ".jpg?fbplay", with: ".mp4")
+                    return (url, d)
+                }
             }
             if let videoPreview = d.preview?.redditVideoPreview {
                 if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
-                    return url
+                    return (url, d)
                 }
             }
             if let resolutions = d.preview?.images?.first?.resolutions {
-                return resolutions.max(by: { $0.width * $0.height < $1.width * $1.height })?.url
+                return resolutions.max(by: { $0.width * $0.height < $1.width * $1.height })?.url.map { ($0, d) }
             }
-            return child.data.preview?.images?.first?.source?.url
-        }).map {$0.replacingOccurrences(of: "&amp;", with: "&") } .compactMap({URL(string: $0)}).map { LoadableImageEntity.placeHolder($0, false) }
+            return child.data.preview?.images?.first?.source?.url.map {($0, d)}
+        }).map {
+            ($0.0.replacingOccurrences(of: "&amp;", with: "&"), $0.1)
+            } .compactMap{ (u, d) -> (URL, RedditLoader.SubredditPage.Child.ChildData)? in
+                URL(string: u).map { ($0, d) }
+            } .map {
+                LoadableImageEntity.placeHolder($0.0,
+                                                false,
+                                                ["title": $0.1.title ?? "",
+                                                 "author": $0.1.author ?? "",
+                                                 "text": $0.1.selftext ?? "",
+                                                 "domain": $0.1.domain ?? ""])
+                
+        }
         
         if let after = doc.data.after {
             let path = url.path
@@ -71,11 +89,13 @@ final class RedditLoader: AbstractImageLoader {
         self.redditSession = URLSession(configuration: configuration)
         self.cacheFunc = { (url: URL) -> URL?  in
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+            
             let fileName = url.lastPathComponent
             if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
                 let cachePath = downloadPath + "/reddit/" + name + "/" + fileName
                 return URL(fileURLWithPath: cachePath)
             }
+            
             if url.host?.contains("v.redd.it") ?? false {
                 let cachePath = downloadPath + "/reddit/" + name + url.pathComponents.joined(separator: "_") + ".mp4"
                 return URL(fileURLWithPath: cachePath)
@@ -125,6 +145,7 @@ final class RedditLoader: AbstractImageLoader {
                 
                 let author: String?
                 let title: String?
+                let selftext: String?
                 let preview: Preview?
                 let url: String?
                 let domain: String?
@@ -152,7 +173,7 @@ final class RedditLoader: AbstractImageLoader {
         task.resume()
     }
     
-    override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
+    override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes: [String: Any], completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
         let useRedditSession = url.host!.hasSuffix(".redd.it") ||
             url.host!.hasSuffix(".redditmedia.com")
@@ -171,7 +192,7 @@ final class RedditLoader: AbstractImageLoader {
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
-                        return completion([EntityKind.image(url, cacheFileUrl)])
+                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                     }
                 case "video/mp4":
                     
@@ -191,15 +212,15 @@ final class RedditLoader: AbstractImageLoader {
                                     CGImageDestinationAddImage(dest, image, nil)
                                     CGImageDestinationFinalize(dest)
                                 }
-                                return completion([EntityKind.image(url, cacheFileUrl)])
+                                return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                             case .failed:
-                                return completion([EntityKind.image(url, cacheFileUrl)])
+                                return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                             default:
                                 break
                             }
                         })
                     } else {
-                        return completion([EntityKind.image(url, cacheFileUrl)])
+                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                     }
                 default:
                     break
@@ -226,16 +247,16 @@ final class RedditLoader: AbstractImageLoader {
         task.resume()
     }
     
-    override func loadCachedPlaceHolder(with url: URL) -> EntityKind? {
+    override func loadCachedPlaceHolder(with url: URL, attributes: [String: Any]) -> EntityKind? {
         let cacheFileUrl = cacheFunc(url)
         if let cacheFileUrl = cacheFileUrl {
             if cacheFileUrl.pathExtension == "mp4" {
                 if fileManager.fileExists(atPath: cacheFileUrl.path) {
-                    return EntityKind.image(url, cacheFileUrl)
+                    return EntityKind.image(url, cacheFileUrl, attributes)
                 }
             }
             if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
-                return EntityKind.image(url, cacheFileUrl)
+                return EntityKind.image(url, cacheFileUrl, attributes)
             }
         }
         return nil

@@ -293,7 +293,7 @@ extension ViewController: NSCollectionViewDataSource {
                     // If cache is hit, the entity could have been changed
                     break
                 }
-            case .image(let (_, cacheUrl)):
+            case .image(let (_, cacheUrl, _)):
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         let thumbUrl = cacheUrl.appendingPathExtension("vthumb")
@@ -307,14 +307,20 @@ extension ViewController: NSCollectionViewDataSource {
                 imageView.toolTip = self.toolTips[indexPath]
                 
             case .placeHolder(let p):
-                self.toolTips[indexPath] = p.0.host?.contains("v.redd.it") ?? false ? p.0.path : p.0.lastPathComponent
-                imageView.toolTip = self.toolTips[indexPath]
+                let urlPath = p.0.host?.contains("v.redd.it") ?? false ? p.0.path : p.0.lastPathComponent
+                let author = p.2["author"] as? String ?? ""
+                let title = p.2["title"] as? String ?? ""
+                let selftext = p.2["text"] as? String ?? ""
+                let domain = p.2["domain"] as? String ?? ""
+                let toolTip = domain + ": " + urlPath + "\n" + author + "\n" + title +  (selftext.isEmpty ? "" : ("\n\"\"" + selftext + "\"\"\n"))
+                self.toolTips[indexPath] = toolTip
+                imageView.toolTip = toolTip
                 loader.load(entity: originalEntity) { (entities) in
                     guard  previousGeneration == self.generation else {
                         return
                     }
                     guard !entities.isEmpty else {
-                        self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false)
+                        self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
                         return
                     }
                     switch entities.first! {
@@ -327,7 +333,7 @@ extension ViewController: NSCollectionViewDataSource {
                             self.bottomCollectionView.reloadItems(at: [indexPath])
                         }
                     default:
-                        self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false)
+                        self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
                         
                     }
                 }
@@ -336,7 +342,7 @@ extension ViewController: NSCollectionViewDataSource {
                     // if cache is hit, the entity in imageList might have been changed!
                     // skip the following lines
                     imageView.image = nil
-                    imageList[indexPath.item] = ImageEntity.placeHolder(p.0, true)
+                    imageList[indexPath.item] = ImageEntity.placeHolder(p.0, true, p.2)
                     
                 default:
                     break
@@ -354,7 +360,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         let layout = collectionViewLayout as! NSCollectionViewFlowLayout
         let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
         switch imageList[indexPath.item] {
-        case .image(let (url, cacheUrl)):
+        case .image(let (url, cacheUrl, attributes)):
             if let cacheUrl = cacheUrl {
                 let imageSize: CGSize?
                 if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
@@ -388,7 +394,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         if let indexPath = indexPaths.first {
             switch imageList[indexPath.item] {
                 
-            case .image(let (imageUrl, cacheUrl)):
+            case .image(let (imageUrl, cacheUrl, attributes)):
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         topPlayerView.isHidden = false

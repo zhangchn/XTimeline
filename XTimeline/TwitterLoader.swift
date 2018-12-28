@@ -83,7 +83,7 @@ final class TwitterLoader: AbstractImageLoader {
                         let timeline = try dec.decode(TimeLineSnippet.self, from: data)
                         let innerHTML = timeline.itemsHtml
                         
-                        var results = TwitterLoader.imageUrls(from: innerHTML).map { EntityKind.placeHolder($0, false) }
+                        var results = TwitterLoader.imageUrls(from: innerHTML).map { EntityKind.placeHolder($0, false, [:]) }
                         
                         if timeline.hasMoreItems {
                             let query = url.query!.components(separatedBy: "&") .map {
@@ -104,7 +104,7 @@ final class TwitterLoader: AbstractImageLoader {
         }
         task.resume()
     }
-    override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([EntityKind]) ->()) {
+    override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes:[String: Any], completion: @escaping ([EntityKind]) ->()) {
         let task = session.downloadTask(with: url) { (fileUrl, response, err) in
             if let fileUrl = fileUrl, let _ = NSImage(contentsOf: fileUrl) {
                 if let cacheFileUrl = cacheFileUrl {
@@ -113,7 +113,7 @@ final class TwitterLoader: AbstractImageLoader {
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
-                        return completion([EntityKind.image(url, cacheFileUrl)])
+                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                     }
                 }
             }
@@ -121,11 +121,11 @@ final class TwitterLoader: AbstractImageLoader {
         }
         task.resume()
     }
-    override func loadCachedPlaceHolder(with url: URL) -> EntityKind? {
+    override func loadCachedPlaceHolder(with url: URL, attributes: [String: Any]) -> EntityKind? {
         let cacheFileUrl = cacheFunc(url)
         if let cacheFileUrl = cacheFileUrl {
             if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
-                return EntityKind.image(url, cacheFileUrl)
+                return EntityKind.image(url, cacheFileUrl, attributes)
             }
         }
         return nil
@@ -134,7 +134,7 @@ final class TwitterLoader: AbstractImageLoader {
     
     fileprivate func firstPageEntities(html: String) -> [EntityKind] {
         let minId = TwitterLoader.matchPattern1(prefix: "data-min-position=\"", suffix: "\"", in: html).first!
-        var results = TwitterLoader.imageUrls(from: html).map { EntityKind.placeHolder($0, false) }
+        var results = TwitterLoader.imageUrls(from: html).map { EntityKind.placeHolder($0, false, [:]) }
         
         let url = URL(string: "https://twitter.com/i/profiles/show/\(name)/media_timeline?include_available_features=1&include_entities=1&reset_error_state=false&max_position=\(minId)")!
         results.append(EntityKind.batchPlaceHolder(url, false))

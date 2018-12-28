@@ -11,8 +11,8 @@ import Foundation
 protocol EntityLoader {
     associatedtype EntityKind : EntityType // where EntityKind.LoaderType == Self
     func loadNextBatch(with url: URL, completion: @escaping ([EntityKind]) ->())
-    func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([EntityKind]) ->())
-    func loadCachedPlaceHolder(with url: URL) -> EntityKind?
+    func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes: [String: Any], completion: @escaping ([EntityKind]) ->())
+    func loadCachedPlaceHolder(with url: URL, attributes: [String: Any]) -> EntityKind?
     func cacheFileUrl(for url: URL) -> URL?
 }
 
@@ -25,8 +25,8 @@ protocol EntityType {
 }
 
 enum LoadableImageEntity: EntityType {
-    case image(URL, URL?) // URL and cache file URL if exists
-    case placeHolder(URL, Bool)
+    case image(URL, URL?, [String: Any]) // URL and cache file URL if exists
+    case placeHolder(URL, Bool, [String: Any])
     case batchPlaceHolder(URL, Bool)
 }
 
@@ -44,11 +44,11 @@ class AbstractImageLoader: EntityLoader, EntityLoading {
         return nil
     }
     
-    func loadCachedPlaceHolder(with url: URL) -> AbstractImageLoader.EntityKind? {
+    func loadCachedPlaceHolder(with url: URL, attributes: [String: Any]) -> AbstractImageLoader.EntityKind? {
         return nil
     }
     
-    func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, completion: @escaping ([AbstractImageLoader.EntityKind]) -> ()) {
+    func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes: [String: Any], completion: @escaping ([AbstractImageLoader.EntityKind]) -> ()) {
         
     }
     
@@ -61,15 +61,15 @@ class AbstractImageLoader: EntityLoader, EntityLoading {
                 return
             }
             self.loadNextBatch(with: url, completion: completion)
-        case .placeHolder(let(url, loading)):
+        case .placeHolder(let(url, loading, attributes)):
             if loading {
                 return
             }
             let cacheFileUrl = self.cacheFileUrl(for: url)
-            if let entity = self.loadCachedPlaceHolder(with: url) {
+            if let entity = self.loadCachedPlaceHolder(with: url, attributes: attributes) {
                 return completion([entity])
             }
-            self.loadPlaceHolder(with: url, cacheFileUrl: cacheFileUrl, completion: completion)
+            self.loadPlaceHolder(with: url, cacheFileUrl: cacheFileUrl, attributes: attributes, completion: completion)
             
         }
     }
