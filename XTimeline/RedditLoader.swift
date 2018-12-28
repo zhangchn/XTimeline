@@ -89,14 +89,23 @@ final class RedditLoader: AbstractImageLoader {
         self.redditSession = URLSession(configuration: configuration)
         self.cacheFunc = { (url: URL) -> URL?  in
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
-            
+            let fm = FileManager()
             let fileName = url.lastPathComponent
             if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
+                if fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name) {
+                    let cachePath = downloadPath + "/reddit/.external/" + name + "/" + fileName
+                    return URL(fileURLWithPath: cachePath)
+                }
                 let cachePath = downloadPath + "/reddit/" + name + "/" + fileName
                 return URL(fileURLWithPath: cachePath)
             }
             
             if url.host?.contains("v.redd.it") ?? false {
+                if fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name) {
+                    let cachePath = downloadPath + "/reddit/.external/" + name + "/" + url.pathComponents.joined(separator: "_") + ".mp4"
+                    return URL(fileURLWithPath: cachePath)
+                }
+
                 let cachePath = downloadPath + "/reddit/" + name + url.pathComponents.joined(separator: "_") + ".mp4"
                 return URL(fileURLWithPath: cachePath)
             }

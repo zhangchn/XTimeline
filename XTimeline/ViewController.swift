@@ -16,6 +16,7 @@ class ViewController: NSViewController {
     var name : String!
     var sizeForImage: [URL: CGSize] = [:]
     var toolTips: [IndexPath: String] = [:]
+    var shortTips: [IndexPath: String] = [:]
     var selectionCenter: CGPoint = .zero {
         didSet {
             selectionRectangle.frame = CGRect(x: selectionCenter.x - selectionSize/2, y: selectionCenter.y - selectionSize/2, width: selectionSize, height: selectionSize)
@@ -314,6 +315,7 @@ extension ViewController: NSCollectionViewDataSource {
                 let domain = p.2["domain"] as? String ?? ""
                 let toolTip = domain + ": " + urlPath + "\n" + author + "\n" + title +  (selftext.isEmpty ? "" : ("\n\"\"" + selftext + "\"\"\n"))
                 self.toolTips[indexPath] = toolTip
+                self.shortTips[indexPath] = domain + ": " + urlPath + " " + title
                 imageView.toolTip = toolTip
                 loader.load(entity: originalEntity) { (entities) in
                     guard  previousGeneration == self.generation else {
@@ -414,8 +416,8 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 } else {
                     topImageView.image = NSImage(contentsOf: imageUrl)
                 }
-                if let toolTip = toolTips[indexPath] {
-                    self.view.window?.title = name + ": " + toolTip
+                if let shortTip = shortTips[indexPath] {
+                    self.view.window?.title = name + ": " + shortTip
                 } else {
                     self.view.window?.title = name + ": ..."
                 }
