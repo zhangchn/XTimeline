@@ -14,6 +14,17 @@ final class TwitterLoader: AbstractImageLoader {
         let hasMoreItems: Bool
         let itemsHtml: String
     }
+    
+    struct VideoTweetConfig: Codable {
+        struct Track: Codable {
+            let contentType: String?
+            let contentId: String
+            let playbackUrl: String?
+            let playbackType: String?
+            let is360: Bool?
+        }
+        let track: Track
+    }
 
     var cacheFunc: ((URL) -> URL?)
 
@@ -44,6 +55,31 @@ final class TwitterLoader: AbstractImageLoader {
     fileprivate static func imageUrls(from innerHTML: String) -> [URL] {
         let dataImageUrls = matchPattern1(prefix: "data-image-url=\"", suffix: "\"", in: innerHTML)
         return dataImageUrls.compactMap { URL(string: String($0)) }
+    }
+    
+    fileprivate static func mediaUrls(from innerHTML: String) -> [URL] {
+        let segments = innerHTML.components(separatedBy: "<li class=\"js-stream-item")
+        let urls = segments.compactMap() { (str) -> [URL]? in
+            if (str.contains("<div class=\"AdaptiveMedia-video\">")) {
+                // tweet-id
+                let tweetIds = matchPattern1(prefix: "data-item-id=\"", suffix: "\"", in: str)
+                if tweetIds.isEmpty {
+                    return nil
+                }
+                // deal with video later
+                if let u = URL(string: "https://api.twitter.com/1.1/videos/tweet/config/\(tweetIds[0]).json") {
+                    return [u]
+                } else {
+                    return nil
+                }
+            } else if (str.contains("<div class=\"AdaptiveMedia-photoContainer")) {
+                return imageUrls(from: str)
+            } else {
+                return nil
+            }
+        }
+        
+        return urls.joined().map { $0 }
     }
     
     fileprivate static func matchPattern1(prefix: String, suffix: String, in string: String) -> [Substring] {
@@ -83,8 +119,10 @@ final class TwitterLoader: AbstractImageLoader {
                         let timeline = try dec.decode(TimeLineSnippet.self, from: data)
                         let innerHTML = timeline.itemsHtml
                         
-                        var results = TwitterLoader.imageUrls(from: innerHTML).map { EntityKind.placeHolder($0, false, [:]) }
-                        
+                        //var results = TwitterLoader.imageUrls(from: innerHTML).map { EntityKind.placeHolder($0, false, [:]) }
+                        var results = TwitterLoader.mediaUrls(from: innerHTML).map {
+                            EntityKind.placeHolder($0, false, [:])
+                        }
                         if timeline.hasMoreItems {
                             let query = url.query!.components(separatedBy: "&") .map {
                                 $0.starts(with: "max_position=") ? "max_position=\(timeline.minPosition)" : $0
@@ -104,9 +142,63 @@ final class TwitterLoader: AbstractImageLoader {
         }
         task.resume()
     }
+    
+    func loadVideo(with playbackUrl: URL, cacheFileUrl: URL?, attributes: [String: Any], completion: @escaping([EntityKind])->()) {
+        let task = self.session.dataTask(with: playbackUrl) { (data, response, err) in
+            if let data = data, let str = String(data: data, encoding: String.Encoding.utf8) {
+                let lines = str.split(separator: "\n")
+                var path: [String] = []
+                for idx in 0..<lines.count {
+                    let line = lines[idx]
+                    if line.hasPrefix("#EXT-X-STREAM-INF:"), idx < lines.count - 1 {
+                        path.append(String(lines[idx + 1]))
+                    }
+                }
+                if !path.isEmpty {
+                    let p = path.count > 2 ? path[1] : path.last!
+                    let url = URL(string: playbackUrl.scheme! + "://" + playbackUrl.host! + p)!
+                    
+                    let task2 = self.session.dataTask(with: url) { (data2, response2, err2) in
+                        if let data2 = data2, let str = String(data: data2, encoding: String.Encoding.utf8) {
+                            let lines = str.split(separator: "\n")
+                            var path: [String] = []
+                            for idx in 0..<lines.count {
+                                let line = lines[idx]
+                                if line.hasPrefix("#EXT-X-STREAM-INF:"), idx < lines.count - 1 {
+                                    path.append(String(lines[idx + 1]))
+                                }
+                            }
+                        }
+                    }
+                    task2.resume()
+                } else {
+                    return completion([])
+                }
+            }
+        }
+        task.resume()
+    }
     override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes:[String: Any], completion: @escaping ([EntityKind]) ->()) {
+        var isVideo = false
+        if let host = url.host, host == "api.twitter.com" {
+            isVideo = true
+        }
         let task = session.downloadTask(with: url) { (fileUrl, response, err) in
-            if let fileUrl = fileUrl, let _ = NSImage(contentsOf: fileUrl) {
+            if isVideo {
+                if let fileUrl = fileUrl, let json = try? Data(contentsOf: fileUrl) {
+                    let dec = JSONDecoder()
+                    do {
+                        let config = try dec.decode(VideoTweetConfig.self, from: json)
+                        if let u = config.track.playbackUrl, let playbackUrl = URL(string: u) {
+                            print("will load (\(config.track.contentId), \(config.track.contentType ?? ""), \(config.track.playbackType ?? ""), \(config.track.playbackUrl ?? ""))")
+                            self.loadVideo(with: playbackUrl, cacheFileUrl: cacheFileUrl, attributes: attributes, completion: completion)
+                            return
+                        }
+                    } catch let err {
+                        print("Error decoding video config: \(err)")
+                    }
+                }
+            } else if let fileUrl = fileUrl, let _ = NSImage(contentsOf: fileUrl) {
                 if let cacheFileUrl = cacheFileUrl {
                     let fileName = url.lastPathComponent
                     if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") {
@@ -134,8 +226,9 @@ final class TwitterLoader: AbstractImageLoader {
     
     fileprivate func firstPageEntities(html: String) -> [EntityKind] {
         let minId = TwitterLoader.matchPattern1(prefix: "data-min-position=\"", suffix: "\"", in: html).first!
-        var results = TwitterLoader.imageUrls(from: html).map { EntityKind.placeHolder($0, false, [:]) }
-        
+        //var results = TwitterLoader.imageUrls(from: html).map { EntityKind.placeHolder($0, false, [:]) }
+        var results = TwitterLoader.mediaUrls(from: html).map { EntityKind.placeHolder($0, false, [:]) }
+
         let url = URL(string: "https://twitter.com/i/profiles/show/\(name)/media_timeline?include_available_features=1&include_entities=1&reset_error_state=false&max_position=\(minId)")!
         results.append(EntityKind.batchPlaceHolder(url, false))
         return results
@@ -146,6 +239,17 @@ final class TwitterLoader: AbstractImageLoader {
         let task = session.dataTask(with: firstPageUrl) {
             (data, response, error) in
             if let data = data, let html = String(data: data, encoding: .utf8) {
+                if html.contains("<div class=\"errorpage-topbar\">") {
+                    /*
+                     DispatchQueue.main.async {
+                     let error = NSError(domain: "twloader", code: 10, userInfo: [NSLocalizedFailureReasonErrorKey: "Invalid URL"])
+                     let alert = NSAlert(error: error)
+                     alert.beginSheetModal(for: <#T##NSWindow#>, completionHandler: nil)
+                     }*/
+                    print("Error loading url: \(firstPageUrl)")
+                    return completion([])
+                }
+                
                 let imageList = self.firstPageEntities(html: html)
                 completion(imageList)
 //                DispatchQueue.main.async {
