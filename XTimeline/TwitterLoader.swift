@@ -26,6 +26,7 @@ final class TwitterLoader: AbstractImageLoader {
         let track: Track
     }
 
+    // cacheFunc is a function mapping a resource URL to locally cachable file URL
     var cacheFunc: ((URL) -> URL?)
 
     let name: String
@@ -35,17 +36,31 @@ final class TwitterLoader: AbstractImageLoader {
         self.name = name
         self.session = session
         self.cacheFunc = { (url: URL) -> URL?  in
+            let isVideo = url.host.map { $0 == "api.twitter.com" } ?? false
+            let fm = FileManager()
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
-            let fileName = url.lastPathComponent
-            if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") {
-                let fm = FileManager()
-                if fm.fileExists(atPath: downloadPath + "/twmedia/.external/" + name) {
-                    let cachePath =  downloadPath + "/twmedia/.external/" + name + "/" + fileName
-                    return URL(fileURLWithPath: cachePath)
-                } else {
-                    let cachePath =  downloadPath + "/twmedia/" + name + "/" + fileName
-                    return URL(fileURLWithPath: cachePath)
+            let externalExists = fm.fileExists(atPath: downloadPath + "twmedia/.external/" + name)
+            var cachePath: String?
+            if isVideo {
+                if let tweetId = url.lastPathComponent.split(separator: ".").first {
+                    if externalExists {
+                        cachePath = downloadPath + "/twmedia/.external/" + name + "/" + tweetId + ".m3u8"
+                    } else {
+                        cachePath =  downloadPath + "/twmedia/" + name + "/" + tweetId + ".m3u8"
+                    }
                 }
+            } else {
+                let fileName = url.lastPathComponent
+                if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") {
+                    if externalExists {
+                        cachePath =  downloadPath + "/twmedia/.external/" + name + "/" + fileName
+                    } else {
+                        cachePath =  downloadPath + "/twmedia/" + name + "/" + fileName
+                    }
+                }
+            }
+            if let cachePath = cachePath {
+                return URL(fileURLWithPath: cachePath)
             }
             return nil
         }
@@ -120,8 +135,12 @@ final class TwitterLoader: AbstractImageLoader {
                         let innerHTML = timeline.itemsHtml
                         
                         //var results = TwitterLoader.imageUrls(from: innerHTML).map { EntityKind.placeHolder($0, false, [:]) }
-                        var results = TwitterLoader.mediaUrls(from: innerHTML).map {
-                            EntityKind.placeHolder($0, false, [:])
+                        var results = TwitterLoader.mediaUrls(from: innerHTML).map { (url) -> EntityKind in
+                            if let host = url.host, host == "api.twitter.com" {
+                                return EntityKind.placeHolder(url, false, ["twvideo" : true])
+                            } else {
+                                return EntityKind.placeHolder(url, false, ["twvideo" : false])
+                            }
                         }
                         if timeline.hasMoreItems {
                             let query = url.query!.components(separatedBy: "&") .map {
@@ -144,6 +163,7 @@ final class TwitterLoader: AbstractImageLoader {
     }
     
     func loadVideo(with playbackUrl: URL, cacheFileUrl: URL?, attributes: [String: Any], completion: @escaping([EntityKind])->()) {
+        guard let cacheFileUrl = cacheFileUrl else { return }
         let task = self.session.dataTask(with: playbackUrl) { (data, response, err) in
             if let data = data, let str = String(data: data, encoding: String.Encoding.utf8) {
                 let lines = str.split(separator: "\n")
@@ -160,14 +180,10 @@ final class TwitterLoader: AbstractImageLoader {
                     
                     let task2 = self.session.dataTask(with: url) { (data2, response2, err2) in
                         if let data2 = data2, let str = String(data: data2, encoding: String.Encoding.utf8) {
-                            let lines = str.split(separator: "\n")
-                            var path: [String] = []
-                            for idx in 0..<lines.count {
-                                let line = lines[idx]
-                                if line.hasPrefix("#EXT-X-STREAM-INF:"), idx < lines.count - 1 {
-                                    path.append(String(lines[idx + 1]))
-                                }
-                            }
+                            let out = str.split(separator: "\n").map {
+                                $0.hasPrefix("#") ? $0 : (playbackUrl.scheme! + "://" + playbackUrl.host! + $0)
+                                } .joined(separator: "\n")
+                            try? out.data(using: .utf8)?.write(to: cacheFileUrl)
                         }
                     }
                     task2.resume()
@@ -183,7 +199,14 @@ final class TwitterLoader: AbstractImageLoader {
         if let host = url.host, host == "api.twitter.com" {
             isVideo = true
         }
-        let task = session.downloadTask(with: url) { (fileUrl, response, err) in
+        var req = URLRequest(url: url)
+        req.addValue("https://twitter.com/\(name)/media/", forHTTPHeaderField: "Referer")
+        req.addValue("", forHTTPHeaderField: "authorization")
+        req.addValue("""
+""", forHTTPHeaderField: "Cookie")
+        req.addValue("", forHTTPHeaderField: "x-csrf-token")
+        req.addValue("OAuth2Session", forHTTPHeaderField: "x-twitter-auth-type")
+        let task = session.downloadTask(with: req) { (fileUrl, response, err) in
             if isVideo {
                 if let fileUrl = fileUrl, let json = try? Data(contentsOf: fileUrl) {
                     let dec = JSONDecoder()

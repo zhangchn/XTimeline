@@ -318,7 +318,7 @@ extension ViewController: NSCollectionViewDataSource {
                 self.shortTips[indexPath] = domain + ": " + urlPath + " " + title
                 imageView.toolTip = toolTip
                 loader.load(entity: originalEntity) { (entities) in
-                    guard  previousGeneration == self.generation else {
+                    guard previousGeneration == self.generation else {
                         return
                     }
                     guard !entities.isEmpty else {
@@ -328,7 +328,7 @@ extension ViewController: NSCollectionViewDataSource {
                     switch entities.first! {
                     case .image:
                         DispatchQueue.main.async {
-                            guard  previousGeneration == self.generation else {
+                            guard previousGeneration == self.generation else {
                                 return
                             }
                             self.imageList[indexPath.item] = entities.first!
@@ -336,7 +336,6 @@ extension ViewController: NSCollectionViewDataSource {
                         }
                     default:
                         self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
-                        
                     }
                 }
                 switch imageList[indexPath.item] {
