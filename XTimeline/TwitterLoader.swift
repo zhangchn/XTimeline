@@ -39,7 +39,7 @@ final class TwitterLoader: AbstractImageLoader {
             let isVideo = url.host.map { $0 == "api.twitter.com" } ?? false
             let fm = FileManager()
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
-            let externalExists = fm.fileExists(atPath: downloadPath + "twmedia/.external/" + name)
+            let externalExists = fm.fileExists(atPath: downloadPath + "/twmedia/.external/" + name)
             var cachePath: String?
             if isVideo {
                 if let tweetId = url.lastPathComponent.split(separator: ".").first {
@@ -239,8 +239,19 @@ final class TwitterLoader: AbstractImageLoader {
     override func loadCachedPlaceHolder(with url: URL, attributes: [String: Any]) -> EntityKind? {
         let cacheFileUrl = cacheFunc(url)
         if let cacheFileUrl = cacheFileUrl {
-            if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
-                return EntityKind.image(url, cacheFileUrl, attributes)
+            if fileManager.fileExists(atPath: cacheFileUrl.path) {
+                switch cacheFileUrl.pathExtension {
+                case "m3u8":
+                    return EntityKind.image(url, cacheFileUrl, attributes)
+                case "jpg", "jpeg", "png", "gif", "mp4":
+                    if let _ = NSImage(contentsOf: cacheFileUrl) {
+                        return EntityKind.image(url, cacheFileUrl, attributes)
+                    }
+                default:
+                    break
+                }
+                
+                
             }
         }
         return nil
