@@ -195,6 +195,7 @@ final class TwitterLoader: AbstractImageLoader {
         task.resume()
     }
     override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes:[String: Any], completion: @escaping ([EntityKind]) ->()) {
+        var req = URLRequest(url: url)
         var isVideo = false
         if let host = url.host, host == "api.twitter.com" {
             isVideo = true
@@ -204,8 +205,9 @@ final class TwitterLoader: AbstractImageLoader {
         req.addValue("", forHTTPHeaderField: "authorization")
         req.addValue("""
 """, forHTTPHeaderField: "Cookie")
-        req.addValue("", forHTTPHeaderField: "x-csrf-token")
-        req.addValue("OAuth2Session", forHTTPHeaderField: "x-twitter-auth-type")
+            req.addValue("", forHTTPHeaderField: "x-csrf-token")
+            req.addValue("OAuth2Session", forHTTPHeaderField: "x-twitter-auth-type")
+        }
         let task = session.downloadTask(with: req) { (fileUrl, response, err) in
             if isVideo {
                 if let fileUrl = fileUrl, let json = try? Data(contentsOf: fileUrl) {
@@ -214,6 +216,15 @@ final class TwitterLoader: AbstractImageLoader {
                         let config = try dec.decode(VideoTweetConfig.self, from: json)
                         if let u = config.track.playbackUrl, let playbackUrl = URL(string: u) {
                             print("will load (\(config.track.contentId), \(config.track.contentType ?? ""), \(config.track.playbackType ?? ""), \(config.track.playbackUrl ?? ""))")
+                            if let type = config.track.playbackType, type == "video/mp4" {
+                                // https://video.twimg.com/tweet_video/__ID__.mp4
+                                // Recursively load mp4 for gif resources
+                                let gifCacheURL = self.cacheFunc(playbackUrl)
+                                if let path = gifCacheURL?.path, self.fileManager.fileExists(atPath: path) {
+                                    return completion([EntityKind.image(url, gifCacheURL, attributes)])
+                                }
+                                return self.loadPlaceHolder(with: playbackUrl, cacheFileUrl: gifCacheURL, attributes: attributes, completion: completion)
+                            }
                             self.loadVideo(with: playbackUrl, cacheFileUrl: cacheFileUrl, attributes: attributes, completion: completion)
                             return
                         }
@@ -221,14 +232,26 @@ final class TwitterLoader: AbstractImageLoader {
                         print("Error decoding video config: \(err)")
                     }
                 }
-            } else if let fileUrl = fileUrl, let _ = NSImage(contentsOf: fileUrl) {
+            } else if let fileUrl = fileUrl {
                 if let cacheFileUrl = cacheFileUrl {
-                    let fileName = url.lastPathComponent
-                    if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") {
+                    let fileExtension = url.pathExtension.lowercased()
+                    switch fileExtension {
+                    case "jpg", "png", "gif":
+                        if NSImage(contentsOf: fileUrl) == nil {
+                            return completion([])
+                        }
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
                         return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                    case "mp4":
+                        if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                            try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                            return generateThumbnail(for: url, cacheFileUrl: cacheFileUrl, attributes: attributes, completion: completion)
+
+                        }
+                    default:
+                        break
                     }
                 }
             }
@@ -243,10 +266,20 @@ final class TwitterLoader: AbstractImageLoader {
                 switch cacheFileUrl.pathExtension {
                 case "m3u8":
                     return EntityKind.image(url, cacheFileUrl, attributes)
-                case "jpg", "jpeg", "png", "gif", "mp4":
+                case "jpg", "jpeg", "png", "gif":
                     if let _ = NSImage(contentsOf: cacheFileUrl) {
                         return EntityKind.image(url, cacheFileUrl, attributes)
                     }
+                case "mp4":
+                    let path = cacheFileUrl.path
+                    let thumbPath = path + ".vthumb"
+                    
+                    if !fileManager.fileExists(atPath: thumbPath) {
+                        // FIXME: Should reload after thumbnail generation
+                        generateThumbnail(for: url, cacheFileUrl: cacheFileUrl, attributes: attributes) { _ in }
+                    }
+                    return EntityKind.image(url, cacheFileUrl, attributes)
+                    
                 default:
                     break
                 }
@@ -259,7 +292,9 @@ final class TwitterLoader: AbstractImageLoader {
     
     
     fileprivate func firstPageEntities(html: String) -> [EntityKind] {
-        let minId = TwitterLoader.matchPattern1(prefix: "data-min-position=\"", suffix: "\"", in: html).first!
+        guard let minId = TwitterLoader.matchPattern1(prefix: "data-min-position=\"", suffix: "\"", in: html).first else {
+            return []
+        }
         //var results = TwitterLoader.imageUrls(from: html).map { EntityKind.placeHolder($0, false, [:]) }
         var results = TwitterLoader.mediaUrls(from: html).map { EntityKind.placeHolder($0, false, [:]) }
 

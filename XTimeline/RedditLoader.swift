@@ -9,6 +9,30 @@
 import Cocoa
 import AVFoundation
 
+func generateThumbnail(for url: URL, cacheFileUrl: URL, attributes:[String: Any] , completion: @escaping ([LoadableImageEntity])->()) {
+    let asset = AVAsset(url: cacheFileUrl)
+    asset.loadValuesAsynchronously(forKeys: ["playable"], completionHandler: {
+        switch asset.statusOfValue(forKey: "playable", error: nil) {
+        case .loaded:
+            let igen = AVAssetImageGenerator(asset: asset)
+            let time = CMTime(seconds: asset.duration.seconds * 0.33, preferredTimescale: asset.duration.timescale)
+            let videoThumb = URL(fileURLWithPath: cacheFileUrl.path).appendingPathExtension("vthumb")
+            
+            if let image = try? igen.copyCGImage(at: time, actualTime: nil),
+                let dest = CGImageDestinationCreateWithURL(videoThumb as CFURL, kUTTypePNG, 1, nil) {
+                CGImageDestinationAddImage(dest, image, nil)
+                CGImageDestinationFinalize(dest)
+            }
+            return completion([LoadableImageEntity.image(url, cacheFileUrl, attributes)])
+        case .failed:
+            return completion([LoadableImageEntity.image(url, cacheFileUrl, attributes)])
+        default:
+            break
+        }
+    })
+
+}
+
 fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
     let decoder = JSONDecoder()
     decoder.keyDecodingStrategy = .convertFromSnakeCase
@@ -208,6 +232,8 @@ final class RedditLoader: AbstractImageLoader {
                     if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                         
                         try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                        generateThumbnail(for: url, cacheFileUrl: cacheFileUrl, attributes: attributes, completion: completion)
+                        /*
                         let asset = AVAsset(url: cacheFileUrl)
                         asset.loadValuesAsynchronously(forKeys: ["playable"], completionHandler: {
                             switch asset.statusOfValue(forKey: "playable", error: nil) {
@@ -228,6 +254,8 @@ final class RedditLoader: AbstractImageLoader {
                                 break
                             }
                         })
+                         */
+                        
                     } else {
                         return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                     }
