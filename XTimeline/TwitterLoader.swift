@@ -199,11 +199,9 @@ final class TwitterLoader: AbstractImageLoader {
         var isVideo = false
         if let host = url.host, host == "api.twitter.com" {
             isVideo = true
-        }
-        var req = URLRequest(url: url)
-        req.addValue("https://twitter.com/\(name)/media/", forHTTPHeaderField: "Referer")
-        req.addValue("", forHTTPHeaderField: "authorization")
-        req.addValue("""
+            req.addValue("https://twitter.com/\(name)/media/", forHTTPHeaderField: "Referer")
+            req.addValue("", forHTTPHeaderField: "authorization")
+            req.addValue("""
 """, forHTTPHeaderField: "Cookie")
             req.addValue("", forHTTPHeaderField: "x-csrf-token")
             req.addValue("OAuth2Session", forHTTPHeaderField: "x-twitter-auth-type")
