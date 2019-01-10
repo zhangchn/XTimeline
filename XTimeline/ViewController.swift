@@ -10,6 +10,14 @@ import Cocoa
 import AVFoundation
 import AVKit
 
+func min(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
+    return CGPoint(x: min(a.x, b.x), y: min(a.y, b.y))
+}
+
+func max(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
+    return CGPoint(x: max(a.x, b.x), y: max(a.y, b.y))
+}
+
 class ViewController: NSViewController {
     @IBOutlet weak var selectionRectangle : NSView!
     var session: URLSession!
@@ -53,7 +61,7 @@ class ViewController: NSViewController {
 
         session = URLSession(configuration: configuration)
         
-        selectionRectangle.isHidden = true
+        //selectionRectangle.isHidden = true
         selectionRectangle.wantsLayer = true
         selectionRectangle.layer?.borderColor = NSColor.white.withAlphaComponent(0.7).cgColor
         selectionRectangle.layer?.borderWidth = 2
@@ -65,7 +73,6 @@ class ViewController: NSViewController {
     }
 
     func setUpRedditLoader(name: String) {
-        //name = "petitegonewild"
         self.name = name
         self.view.window?.title = name
         let fm = FileManager.default
@@ -196,7 +203,13 @@ class ViewController: NSViewController {
     
     override func mouseMoved(with event: NSEvent) {
         //print("mouse moved: \(event.deltaX), \(event.deltaY)")
-        selectionCenter = topImageView.convert(event.locationInWindow, from: nil)
+        //let imageRect = topImageView.cell?.drawingRect(forBounds: topImageView.bounds)
+        //print("imageRect: \(imageRect)")
+        let b = topImageView.bounds
+        let minVal = CGPoint(x: selectionSize / 2, y: selectionSize / 2)
+        let maxVal = CGPoint(x: b.maxX - selectionSize / 2, y: b.maxY - selectionSize / 2)
+        let pos = topImageView.convert(event.locationInWindow, from: nil)
+        selectionCenter = min(maxVal, max(minVal, pos))
     }
     
     override func scrollWheel(with event: NSEvent) {
@@ -361,7 +374,8 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         let layout = collectionViewLayout as! NSCollectionViewFlowLayout
         let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
         switch imageList[indexPath.item] {
-        case .image(let (url, cacheUrl, attributes)):
+        case .image(let (url, cacheUrl, _ /* attributes */)):
+            //let isVideo = attributes[TwitterLoader.VideoKey] as? Bool ?? false
             if let cacheUrl = cacheUrl {
                 let imageSize: CGSize?
                 if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
@@ -374,8 +388,8 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 if let s = imageSize {
                     sizeForImage[url] = s
                 }
-                let height = min(max(collectionView.bounds.height - margin, 20), imageSize?.height ?? 20)
-                let width = height * (imageSize?.width ?? 20) / (imageSize?.height ?? 20)
+                let height = min(max(collectionView.bounds.height - margin, 30), imageSize?.height ?? 30)
+                let width = height * (imageSize?.width ?? 30) / (imageSize?.height ?? 30)
                 let size = NSSize(width: width, height: height)
                 return size
             }
@@ -395,7 +409,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         if let indexPath = indexPaths.first {
             switch imageList[indexPath.item] {
                 
-            case .image(let (imageUrl, cacheUrl, attributes)):
+            case .image(let (imageUrl, cacheUrl, _ /*attributes*/)):
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         topPlayerView.isHidden = false
