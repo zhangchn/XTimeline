@@ -138,9 +138,9 @@ final class TwitterLoader: AbstractImageLoader {
                         //var results = TwitterLoader.imageUrls(from: innerHTML).map { EntityKind.placeHolder($0, false, [:]) }
                         var results = TwitterLoader.mediaUrls(from: innerHTML).map { (url) -> EntityKind in
                             if let host = url.host, host == "api.twitter.com" {
-                                return EntityKind.placeHolder(url, false, [Self.VideoKey : true])
+                                return EntityKind.placeHolder(url, false, [TwitterLoader.VideoKey : true])
                             } else {
-                                return EntityKind.placeHolder(url, false, [Self.VideoKey : false])
+                                return EntityKind.placeHolder(url, false, [TwitterLoader.VideoKey : false])
                             }
                         }
                         if timeline.hasMoreItems {

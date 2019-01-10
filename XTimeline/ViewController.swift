@@ -10,6 +10,14 @@ import Cocoa
 import AVFoundation
 import AVKit
 
+func min(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
+    return CGPoint(x: min(a.x, b.x), y: min(a.y, b.y))
+}
+
+func max(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
+    return CGPoint(x: max(a.x, b.x), y: max(a.y, b.y))
+}
+
 class ViewController: NSViewController {
     @IBOutlet weak var selectionRectangle : NSView!
     var session: URLSession!
@@ -53,7 +61,7 @@ class ViewController: NSViewController {
 
         session = URLSession(configuration: configuration)
         
-        selectionRectangle.isHidden = true
+        //selectionRectangle.isHidden = true
         selectionRectangle.wantsLayer = true
         selectionRectangle.layer?.borderColor = NSColor.white.withAlphaComponent(0.7).cgColor
         selectionRectangle.layer?.borderWidth = 2
@@ -195,7 +203,13 @@ class ViewController: NSViewController {
     
     override func mouseMoved(with event: NSEvent) {
         //print("mouse moved: \(event.deltaX), \(event.deltaY)")
-        selectionCenter = topImageView.convert(event.locationInWindow, from: nil)
+        //let imageRect = topImageView.cell?.drawingRect(forBounds: topImageView.bounds)
+        //print("imageRect: \(imageRect)")
+        let b = topImageView.bounds
+        let minVal = CGPoint(x: selectionSize / 2, y: selectionSize / 2)
+        let maxVal = CGPoint(x: b.maxX - selectionSize / 2, y: b.maxY - selectionSize / 2)
+        let pos = topImageView.convert(event.locationInWindow, from: nil)
+        selectionCenter = min(maxVal, max(minVal, pos))
     }
     
     override func scrollWheel(with event: NSEvent) {
