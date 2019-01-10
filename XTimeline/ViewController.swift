@@ -65,7 +65,6 @@ class ViewController: NSViewController {
     }
 
     func setUpRedditLoader(name: String) {
-        //name = "petitegonewild"
         self.name = name
         self.view.window?.title = name
         let fm = FileManager.default
@@ -361,7 +360,8 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         let layout = collectionViewLayout as! NSCollectionViewFlowLayout
         let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
         switch imageList[indexPath.item] {
-        case .image(let (url, cacheUrl, attributes)):
+        case .image(let (url, cacheUrl, _ /* attributes */)):
+            //let isVideo = attributes[TwitterLoader.VideoKey] as? Bool ?? false
             if let cacheUrl = cacheUrl {
                 let imageSize: CGSize?
                 if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
@@ -374,8 +374,8 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 if let s = imageSize {
                     sizeForImage[url] = s
                 }
-                let height = min(max(collectionView.bounds.height - margin, 20), imageSize?.height ?? 20)
-                let width = height * (imageSize?.width ?? 20) / (imageSize?.height ?? 20)
+                let height = min(max(collectionView.bounds.height - margin, 30), imageSize?.height ?? 30)
+                let width = height * (imageSize?.width ?? 30) / (imageSize?.height ?? 30)
                 let size = NSSize(width: width, height: height)
                 return size
             }
@@ -395,7 +395,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         if let indexPath = indexPaths.first {
             switch imageList[indexPath.item] {
                 
-            case .image(let (imageUrl, cacheUrl, attributes)):
+            case .image(let (imageUrl, cacheUrl, _ /*attributes*/)):
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         topPlayerView.isHidden = false

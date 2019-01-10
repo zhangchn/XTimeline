@@ -9,6 +9,7 @@
 import Cocoa
 
 final class TwitterLoader: AbstractImageLoader {
+    static let VideoKey = "twvideo"
     struct TimeLineSnippet: Codable {
         let minPosition: String
         let hasMoreItems: Bool
@@ -137,9 +138,9 @@ final class TwitterLoader: AbstractImageLoader {
                         //var results = TwitterLoader.imageUrls(from: innerHTML).map { EntityKind.placeHolder($0, false, [:]) }
                         var results = TwitterLoader.mediaUrls(from: innerHTML).map { (url) -> EntityKind in
                             if let host = url.host, host == "api.twitter.com" {
-                                return EntityKind.placeHolder(url, false, ["twvideo" : true])
+                                return EntityKind.placeHolder(url, false, [Self.VideoKey : true])
                             } else {
-                                return EntityKind.placeHolder(url, false, ["twvideo" : false])
+                                return EntityKind.placeHolder(url, false, [Self.VideoKey : false])
                             }
                         }
                         if timeline.hasMoreItems {
