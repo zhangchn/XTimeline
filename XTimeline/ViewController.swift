@@ -288,11 +288,15 @@ extension ViewController: NSCollectionViewDataSource {
                             }
                             
                         case .batchPlaceHolder(let b):
-                            self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                            DispatchQueue.main.async {
+                                self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                            }
                             break
                         }
                     } else {
-                        self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                        DispatchQueue.main.async {
+                            self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                        }
                     }
                 }
                 
@@ -335,7 +339,9 @@ extension ViewController: NSCollectionViewDataSource {
                         return
                     }
                     guard !entities.isEmpty else {
-                        self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                        DispatchQueue.main.async {
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                        }
                         return
                     }
                     switch entities.first! {
@@ -345,10 +351,16 @@ extension ViewController: NSCollectionViewDataSource {
                                 return
                             }
                             self.imageList[indexPath.item] = entities.first!
+                            guard collectionView.indexPathsForVisibleItems().contains(indexPath) else {
+                                // Do not trigger re-rendering for invisible cell
+                                return
+                            }
                             self.bottomCollectionView.reloadItems(at: [indexPath])
                         }
                     default:
-                        self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                        DispatchQueue.main.async {
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                        }
                     }
                 }
                 switch imageList[indexPath.item] {
