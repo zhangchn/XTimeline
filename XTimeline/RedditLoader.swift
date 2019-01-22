@@ -8,6 +8,7 @@
 
 import Cocoa
 import AVFoundation
+import SQLite3
 
 func generateThumbnail(for url: URL, cacheFileUrl: URL, attributes:[String: Any] , completion: @escaping ([LoadableImageEntity])->()) {
     let asset = AVAsset(url: cacheFileUrl)
@@ -96,7 +97,146 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
     return []
 }
 
+
+
 final class RedditLoader: AbstractImageLoader {
+    class DBWrapper {
+        typealias DBHandle = OpaquePointer?
+        typealias Statement = OpaquePointer?
+
+        var dbHandle: DBHandle
+        var q : DispatchQueue = DispatchQueue(label: "dbq")
+        
+        var queryStmt1 : Statement
+        var queryStmt2 : Statement
+        var saveStmt: Statement
+
+        init(external: Bool) throws {
+            //self.subreddit = subreddit
+            let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/reddit/")
+            let dbFilename = (external ? path + ".external/" : path) + "/cache.db"
+            try dbFilename.withCString { (pFilename) in
+                guard sqlite3_open(pFilename, &dbHandle) == SQLITE_OK else {
+                    throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed opening cache.db"])
+                }
+            }
+            
+            let initSql = "CREATE TABLE IF NOT EXISTS rdt_child_data (url text, hash text, sub text, post_id text);"
+            try initSql.withCString { (initCStr) in
+                var statement : Statement
+                guard sqlite3_prepare_v2(dbHandle, initCStr, Int32(initSql.lengthOfBytes(using: .utf8)), &statement, nil) == SQLITE_OK else {
+                    throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed prepare initSql"])
+                }
+                guard sqlite3_step(statement) == SQLITE_DONE && sqlite3_finalize(statement) == SQLITE_OK else {
+                    throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed exec initSql"])
+                }
+            }
+            
+            let indexSql = "CREATE INDEX IF NOT EXISTS rdt_sub_post ON rdt_child_data (sub, post_id);"
+            try indexSql.withCString { (initCStr) in
+                var statement : Statement
+                guard sqlite3_prepare_v2(dbHandle, initCStr, Int32(indexSql.lengthOfBytes(using: .utf8)), &statement, nil) == SQLITE_OK else {
+                    throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed prepare indexSql"])
+                }
+                guard sqlite3_step(statement) == SQLITE_DONE && sqlite3_finalize(statement) == SQLITE_OK else {
+                    throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed exec indexSql"])
+                }
+            }
+            
+            let query1 = "SELECT hash FROM rdt_child_data WHERE post_id = ? AND sub = ?;"
+            try query1.withCString({ (cstr) in
+                guard sqlite3_prepare_v2(dbHandle, cstr, Int32(query1.lengthOfBytes(using: .utf8)), &self.queryStmt1, nil) == SQLITE_OK else {
+                    throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed prepare query1"])
+                }
+            })
+            let query2 = "SELECT hash FROM rdt_child_data WHERE url = ?;"
+            try query2.withCString({ (cstr) in
+                guard sqlite3_prepare_v2(dbHandle, cstr, Int32(query2.lengthOfBytes(using: .utf8)), &self.queryStmt2, nil) == SQLITE_OK else {
+                    throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed prepare query2"])
+                }
+            })
+            
+            let save = "INSERT INTO rdt_child_data (sub, url, post_id, hash) VALUES (?, ?, ?, ?);"
+            try save.withCString({ (cstr) in
+                guard sqlite3_prepare_v2(dbHandle, cstr, Int32(save.lengthOfBytes(using: .utf8)), &self.saveStmt, nil) == SQLITE_OK else {
+                    throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed prepare savestmt"])
+                }
+            })
+        }
+        func query(sub: String, post: String, completion: @escaping (String?) -> () ) {
+            q.async {
+                let result = post.withCString { (postStr) -> String? in
+                    sub.withCString { (subStr) -> String? in
+                        guard sqlite3_bind_text(self.queryStmt1, 1, subStr, Int32(sub.utf8.count), nil) == SQLITE_OK
+                            && sqlite3_bind_text(self.queryStmt1, 2, postStr, Int32(post.utf8.count), nil) == SQLITE_OK else {
+                                return nil
+                        }
+                        switch sqlite3_step(self.queryStmt1) {
+                        case SQLITE_ROW:
+                            return String(cString: sqlite3_column_text(self.queryStmt1, 0))
+                        default:
+                            break
+                        }
+                        return nil
+                    }
+                }
+                sqlite3_reset(self.queryStmt1)
+                completion(result)
+            }
+        }
+        func query(url: String, completion: @escaping (String?) -> () ) {
+            q.async {
+                let result = url.withCString { (urlStr) -> String? in
+                    guard sqlite3_bind_text(self.queryStmt2, 1, urlStr, Int32(url.utf8.count), nil) == SQLITE_OK else {
+                        return nil
+                    }
+                    switch sqlite3_step(self.queryStmt2) {
+                    case SQLITE_ROW:
+                        return String(cString: sqlite3_column_text(self.queryStmt2, 0))
+                    default:
+                        break
+                    }
+                    return nil
+                }
+                sqlite3_reset(self.queryStmt2)
+                completion(result)
+            }
+        }
+        func save(sub: String, url: String, postId: String, hash: String) {
+            q.async {
+                
+                url.withCString { (urlStr) in
+                    postId.withCString { (postStr) in
+                        sub.withCString { (subStr) in
+                            hash.withCString { (hashStr) in
+                                guard sqlite3_bind_text(self.saveStmt, 1, subStr, Int32(sub.utf8.count), nil) == SQLITE_OK else {
+                                    return
+                                }
+                                guard sqlite3_bind_text(self.saveStmt, 2, urlStr, Int32(url.utf8.count), nil) == SQLITE_OK else {
+                                    return
+                                }
+                                guard sqlite3_bind_text(self.saveStmt, 3, postStr, Int32(postId.utf8.count), nil) == SQLITE_OK else {
+                                    return
+                                }
+                                guard sqlite3_bind_text(self.saveStmt, 4, hashStr, Int32(hash.utf8.count), nil) == SQLITE_OK else {
+                                    return
+                                }
+                                sqlite3_step(self.saveStmt)
+                            }
+                        }
+                    }
+                }
+                sqlite3_reset(self.saveStmt)
+            }
+        }
+        deinit {
+            q.sync {
+                sqlite3_finalize(queryStmt1)
+                sqlite3_finalize(queryStmt2)
+                sqlite3_close(dbHandle)
+            }
+        }
+    }
     typealias EntityKind = LoadableImageEntity
 
     let name: String
@@ -105,18 +245,19 @@ final class RedditLoader: AbstractImageLoader {
     let fileManager = FileManager()
     var cacheFunc: ((URL) -> URL?)
 
-    init(name: String, session: URLSession) {
+    let sqlite : DBWrapper
+    init(name: String, session: URLSession, external: Bool = false) {
         self.name = name
         self.session = session
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .returnCacheDataElseLoad
         self.redditSession = URLSession(configuration: configuration)
+        try! self.sqlite = DBWrapper(external: external)
         self.cacheFunc = { (url: URL) -> URL?  in
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
-            let fm = FileManager()
             let fileName = url.lastPathComponent
             if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
-                if fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name) {
+                if external {
                     let cachePath = downloadPath + "/reddit/.external/" + name + "/" + fileName
                     return URL(fileURLWithPath: cachePath)
                 }
@@ -125,7 +266,7 @@ final class RedditLoader: AbstractImageLoader {
             }
             
             if url.host?.contains("v.redd.it") ?? false {
-                if fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name) {
+                if external {
                     let cachePath = downloadPath + "/reddit/.external/" + name + "/" + url.pathComponents.joined(separator: "_") + ".mp4"
                     return URL(fileURLWithPath: cachePath)
                 }
@@ -185,6 +326,8 @@ final class RedditLoader: AbstractImageLoader {
                 let isRedditMediaDomain: Bool?
                 let isSelf: Bool?
                 let media: Media?
+                let id: String?
+                let createdUtc: Int?
             }
             let data: ChildData
         }
