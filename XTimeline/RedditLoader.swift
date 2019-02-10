@@ -101,6 +101,15 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
 
 final class RedditLoader: AbstractImageLoader {
     class DBWrapper {
+        class var sharedExternal : DBWrapper {
+            let d = try! DBWrapper(external: true)
+            return d
+        }
+        class var shared : DBWrapper {
+            let d = try! DBWrapper(external: false)
+            return d
+        }
+        
         typealias DBHandle = OpaquePointer?
         typealias Statement = OpaquePointer?
 
@@ -252,7 +261,7 @@ final class RedditLoader: AbstractImageLoader {
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .returnCacheDataElseLoad
         self.redditSession = URLSession(configuration: configuration)
-        try! self.sqlite = DBWrapper(external: external)
+        self.sqlite = external ? DBWrapper.sharedExternal : DBWrapper.shared
         self.cacheFunc = { (url: URL) -> URL?  in
             let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
             let fileName = url.lastPathComponent

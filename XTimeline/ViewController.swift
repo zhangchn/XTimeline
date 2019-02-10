@@ -56,7 +56,7 @@ class ViewController: NSViewController {
             kCFNetworkProxiesSOCKSEnable: true,
         ]
         configuration.httpAdditionalHeaders = [
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:64.0) Gecko/20100101 Firefox/64.0"
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:66.0) Gecko/20100101 Firefox/66.0"
         ]
 
         session = URLSession(configuration: configuration)
@@ -78,11 +78,13 @@ class ViewController: NSViewController {
         let fm = FileManager.default
         let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
         var created = fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name)
+        var external = created
         if !created {
             let dest = downloadPath + "/reddit/.external/" + name
             do {
                 try fm.createDirectory(atPath: dest, withIntermediateDirectories: false, attributes: nil)
                 created = true
+                external = true
             } catch _ {
                 
             }
@@ -102,7 +104,7 @@ class ViewController: NSViewController {
                 }
             }
         }
-        loader = RedditLoader(name: name, session: session)
+        loader = RedditLoader(name: name, session: session, external: external)
         loader.loadFirstPage { (entities: [ImageEntity]) in
             self.imageList = entities
             DispatchQueue.main.async {

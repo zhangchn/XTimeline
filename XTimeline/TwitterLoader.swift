@@ -292,6 +292,7 @@ final class TwitterLoader: AbstractImageLoader {
     
     fileprivate func firstPageEntities(html: String) -> [EntityKind] {
         guard let minId = TwitterLoader.matchPattern1(prefix: "data-min-position=\"", suffix: "\"", in: html).first else {
+            try? html.write(toFile: "/tmp/\(name).failed", atomically: true, encoding: .utf8)
             return []
         }
         //var results = TwitterLoader.imageUrls(from: html).map { EntityKind.placeHolder($0, false, [:]) }
@@ -303,7 +304,7 @@ final class TwitterLoader: AbstractImageLoader {
     }
  
     override func loadFirstPage(completion: @escaping ([EntityKind]) -> () ){
-        let firstPageUrl = URL(string: "https://twitter.com/\(name)/media")!
+        let firstPageUrl = URL(string: "https://twitter.com/\(name)/media/")!
         let task = session.dataTask(with: firstPageUrl) {
             (data, response, error) in
             if let data = data, let html = String(data: data, encoding: .utf8) {
