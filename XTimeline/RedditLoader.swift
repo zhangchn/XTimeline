@@ -6,7 +6,12 @@
 //  Copyright © 2018 ZhangChen. All rights reserved.
 //
 
+#if os(macOS)
 import Cocoa
+#elseif os(iOS)
+import UIKit
+import MobileCoreServices
+#endif
 import AVFoundation
 import SQLite3
 
@@ -364,12 +369,21 @@ final class RedditLoader: AbstractImageLoader {
                 print("did fetch: \(url); " + (contentType.map { "type: " + $0 } ?? ""))
                 switch contentType {
                 case "image/jpeg", "image/png", "image/gif":
+                    #if os(macOS)
                     if let _ = NSImage(contentsOf: fileUrl) {
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
                         return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                     }
+                    #elseif os(iOS)
+                    if let _ = UIImage(contentsOfFile: fileUrl.path) {
+                        if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                            try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                        }
+                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                    }
+                    #endif
                 case "video/mp4":
                     
                     if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
@@ -435,9 +449,15 @@ final class RedditLoader: AbstractImageLoader {
                     return EntityKind.image(url, cacheFileUrl, attributes)
                 }
             }
+            #if os(macOS)
             if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
                 return EntityKind.image(url, cacheFileUrl, attributes)
             }
+            #elseif os(iOS)
+            if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = UIImage(contentsOfFile: cacheFileUrl.path) {
+                return EntityKind.image(url, cacheFileUrl, attributes)
+            }
+            #endif
         }
         return nil
     }

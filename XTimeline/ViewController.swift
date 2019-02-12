@@ -36,7 +36,7 @@ class ViewController: NSViewController {
         }
     }
     var imageList : [ImageEntity] = []
-    var cacheFunc: ((URL) -> URL?)!
+    //var cacheFunc: ((URL) -> URL?)!
     //@IBOutlet weak var topScrollView: NSScrollView!
     @IBOutlet weak var bottomCollectionView: NSCollectionView!
     @IBOutlet weak var topImageView: NSImageView!
