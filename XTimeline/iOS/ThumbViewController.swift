@@ -19,7 +19,7 @@ class ThumbViewController: UITableViewController {
 
     fileprivate func dynamicSize(for imageSize: CGSize) -> CGSize {
         guard imageSize.width > 0, imageSize.height > 0 else {
-            return CGSize(width: 44, height: 44)
+            return CGSize(width: 300, height: 300)
         }
         let insets = tableView.safeAreaInsets.left + tableView.safeAreaInsets.right + 32
         let width = min(tableView.bounds.width - insets, imageSize.width)
@@ -234,7 +234,9 @@ class ThumbViewController: UITableViewController {
         }
         return cell
     }
-    
+    override func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 300
+    }
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         switch imageList[indexPath.item] {
         case .image(let (url, cacheUrl, _)):
@@ -257,6 +259,6 @@ class ThumbViewController: UITableViewController {
         case .placeHolder, .batchPlaceHolder:
             break
         }
-        return 44
+        return 300
     }
 }
