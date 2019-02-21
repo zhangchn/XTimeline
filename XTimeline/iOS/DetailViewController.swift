@@ -7,11 +7,13 @@
 //
 
 import UIKit
+import AVKit
 
 class DetailViewController: UIViewController {
 
     @IBOutlet weak var detailDescriptionLabel: UILabel!
-
+    @IBOutlet weak var imageView: UIImageView!
+    weak var playerController: AVPlayerViewController!
     func configureView() {
         // Update the user interface for the detail item.
         if let detail = detailItem {
@@ -22,6 +24,7 @@ class DetailViewController: UIViewController {
     }
 
     override func viewDidLoad() {
+        
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         configureView()
@@ -35,5 +38,10 @@ class DetailViewController: UIViewController {
     }
 
 
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "embed" {
+            playerController = segue.destination as? AVPlayerViewController
+        }
+    }
 }
 

@@ -76,7 +76,7 @@ class ViewController: NSViewController {
         self.name = name
         self.view.window?.title = name
         let fm = FileManager.default
-        let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+        let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         var created = fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name)
         if !created {
             let dest = downloadPath + "/reddit/.external/" + name
@@ -115,7 +115,7 @@ class ViewController: NSViewController {
         self.name = name
         self.view.window?.title = name
         let fm = FileManager.default
-        let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+        let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         var created = fm.fileExists(atPath: downloadPath + "/twmedia/.external/" + name)
         if !created {
             let dest = downloadPath + "/twmedia/.external/" + name

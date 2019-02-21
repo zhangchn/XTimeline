@@ -118,7 +118,7 @@ final class RedditLoader: AbstractImageLoader {
 
         init(external: Bool) throws {
             //self.subreddit = subreddit
-            let path = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!.appending("/reddit/")
+            let path = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!.appending("/reddit/")
             let dbFilename = (external ? path + ".external/" : path) + "/cache.db"
             try dbFilename.withCString { (pFilename) in
                 guard sqlite3_open(pFilename, &dbHandle) == SQLITE_OK else {
@@ -259,7 +259,7 @@ final class RedditLoader: AbstractImageLoader {
         self.redditSession = URLSession(configuration: configuration)
         try! self.sqlite = DBWrapper(external: external)
         self.cacheFunc = { (url: URL) -> URL?  in
-            let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+            let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
             let fileName = url.lastPathComponent
             if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
                 if external {

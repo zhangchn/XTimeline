@@ -17,6 +17,16 @@ class ThumbViewController: UITableViewController {
     var session: URLSession!
     var sizeForImage: [URL: CGSize] = [:]
 
+    fileprivate func dynamicSize(for imageSize: CGSize) -> CGSize {
+        guard imageSize.width > 0, imageSize.height > 0 else {
+            return CGSize(width: 44, height: 44)
+        }
+        let insets = tableView.safeAreaInsets.left + tableView.safeAreaInsets.right + 32
+        let width = min(tableView.bounds.width - insets, imageSize.width)
+        let height = width * (imageSize.height) / (imageSize.width)
+        return CGSize(width: width, height: height)
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         let configuration = URLSessionConfiguration.default
@@ -28,7 +38,7 @@ class ThumbViewController: UITableViewController {
         title = name
         
         let fm = FileManager.default
-        let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+        let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         var created = fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name)
         if !created {
             let dest = downloadPath + "/reddit/.external/" + name
@@ -120,7 +130,7 @@ class ThumbViewController: UITableViewController {
                                     return
                                 }
                                 self.imageList[indexPath.item] = entities.first!
-                                self.tableView.reloadRows(at: [indexPath], with: .automatic)
+                                self.tableView.reloadRows(at: [indexPath], with: .none)
                                 //self.bottomCollectionView!.reloadItems(at: [indexPath])
                             }
                             
@@ -157,9 +167,10 @@ class ThumbViewController: UITableViewController {
                         }
                     } else {
                         imageView.image = UIImage(contentsOfFile: cacheUrl.path)
-                        var b = imageView.bounds
-                        b.size = sizeForImage[url] ?? CGSize(width: 44, height: 44)
-                        imageView.bounds = b
+                        let imageSize = self.sizeForImage[url] ?? imageView.image?.size ?? .zero
+                        let b = CGRect(origin: .zero, size: dynamicSize(for: imageSize))
+                        imageView.frame = b
+                        cell.contentView.frame = b
                     }
                 }
                 //imageView.toolTip = self.toolTips[indexPath]
@@ -194,7 +205,7 @@ class ThumbViewController: UITableViewController {
                             guard tableView.indexPathsForVisibleRows?.contains(indexPath) ?? false else {
                                 return
                             }
-                            self.tableView.reloadRows(at: [indexPath], with: .automatic)
+                            self.tableView.reloadRows(at: [indexPath], with: .none)
 //                            guard collectionView.indexPathsForVisibleItems().contains(indexPath) else {
 //                                // Do not trigger re-rendering for invisible cell
 //                                return
@@ -239,9 +250,8 @@ class ThumbViewController: UITableViewController {
                 if let s = imageSize {
                     sizeForImage[url] = s
                 }
-                let width = min(tableView.bounds.width, imageSize?.width ?? 44)
-                let height = width * (imageSize?.width ?? 44) / (imageSize?.height ?? 44)
-                return height
+                return dynamicSize(for: imageSize ?? .zero).height
+                
             }
             
         case .placeHolder, .batchPlaceHolder:

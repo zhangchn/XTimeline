@@ -39,7 +39,7 @@ final class TwitterLoader: AbstractImageLoader {
         self.cacheFunc = { (url: URL) -> URL?  in
             let isVideo = url.host.map { $0 == "api.twitter.com" } ?? false
             let fm = FileManager()
-            let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+            let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
             let externalExists = fm.fileExists(atPath: downloadPath + "/twmedia/.external/" + name)
             var cachePath: String?
             if isVideo {
