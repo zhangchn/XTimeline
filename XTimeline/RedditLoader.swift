@@ -38,13 +38,20 @@ func generateThumbnail(for url: URL, cacheFileUrl: URL, attributes:[String: Any]
     })
 
 }
+fileprivate func previewSize(for child: RedditLoader.SubredditPage.Child.ChildData) -> CGSize? {
+    if let source = child.preview?.images?.first?.source {
+        return CGSize(width: source.width, height: source.height)
+    }
+    return nil
+}
 
 fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
     let decoder = JSONDecoder()
     decoder.keyDecodingStrategy = .convertFromSnakeCase
     do {
+        typealias ChildData = RedditLoader.SubredditPage.Child.ChildData
         let doc = try decoder.decode(RedditLoader.SubredditPage.self, from: json)
-        var results = doc.data.children.compactMap({ (child) -> (String, RedditLoader.SubredditPage.Child.ChildData)? in
+        var results = doc.data.children.compactMap({ (child) -> (String, ChildData)? in
             let d = child.data
             if d.isSelf ?? false {
                 return nil
@@ -74,15 +81,23 @@ fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
             return child.data.preview?.images?.first?.source?.url.map {($0, d)}
         }).map {
             ($0.0.replacingOccurrences(of: "&amp;", with: "&"), $0.1)
-            } .compactMap{ (u, d) -> (URL, RedditLoader.SubredditPage.Child.ChildData)? in
+            } .compactMap{ (u, d) -> (URL, ChildData)? in
                 URL(string: u).map { ($0, d) }
-            } .map {
-                LoadableImageEntity.placeHolder($0.0,
+            } .map { (u: URL, d: ChildData) -> LoadableImageEntity in
+                let attr : [String: Any] = previewSize(for: d).map { (size: CGSize) -> [String: Any] in
+                    ["title": d.title ?? "",
+                     "author": d.author ?? "",
+                     "text": d.selftext ?? "",
+                     "domain": d.domain ?? "",
+                     "size": size]
+                    } ??
+                    ["title": d.title ?? "",
+                     "author": d.author ?? "",
+                     "text": d.selftext ?? "",
+                     "domain": d.domain ?? ""]
+                return LoadableImageEntity.placeHolder(u,
                                                 false,
-                                                ["title": $0.1.title ?? "",
-                                                 "author": $0.1.author ?? "",
-                                                 "text": $0.1.selftext ?? "",
-                                                 "domain": $0.1.domain ?? ""])
+                                                attr)
                 
         }
         
@@ -377,10 +392,12 @@ final class RedditLoader: AbstractImageLoader {
                         return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                     }
                     #elseif os(iOS)
-                    if let _ = UIImage(contentsOfFile: fileUrl.path) {
+                    if let img = UIImage(contentsOfFile: fileUrl.path) {
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
+                        var attributes = attributes
+                        attributes["size"] = img.size
                         return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                     }
                     #endif

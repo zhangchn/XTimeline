@@ -196,12 +196,15 @@ class ThumbViewController: UITableViewController {
                         return
                     }
                     switch entities.first! {
-                    case .image:
+                    case .image(let (url, _, attr)):
                         DispatchQueue.main.async {
                             guard previousGeneration == self.generation else {
                                 return
                             }
                             self.imageList[indexPath.item] = entities.first!
+                            if let size = attr["size"] as? CGSize {
+                                self.sizeForImage[url] = size
+                            }
                             guard tableView.indexPathsForVisibleRows?.contains(indexPath) ?? false else {
                                 return
                             }
@@ -235,7 +238,19 @@ class ThumbViewController: UITableViewController {
         return cell
     }
     override func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 300
+        switch imageList[indexPath.item] {
+        case .image(let (url, _, attr)):
+            if let size = attr["size"] as? CGSize ?? sizeForImage[url] {
+                return dynamicSize(for: size).height
+            }
+        case .placeHolder(let (_, _, attr)):
+            if let size = attr["size"] as? CGSize {
+                return dynamicSize(for: size).height
+            }
+        case .batchPlaceHolder:
+            break
+        }
+        return UITableView.automaticDimension
     }
     override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         switch imageList[indexPath.item] {
@@ -255,8 +270,11 @@ class ThumbViewController: UITableViewController {
                 return dynamicSize(for: imageSize ?? .zero).height
                 
             }
-            
-        case .placeHolder, .batchPlaceHolder:
+        case .placeHolder(let (_, _, attr)):
+            if let size = attr["size"] as? CGSize {
+                return dynamicSize(for: size).height
+            }
+        case .batchPlaceHolder:
             break
         }
         return 300
