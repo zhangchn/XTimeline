@@ -16,6 +16,17 @@ class MasterViewController: UITableViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        let p = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)
+        let fm = FileManager()
+        if let subs = try? fm.contentsOfDirectory(atPath: p.first!.appending("/reddit")) {
+            for sub in subs {
+                var isDir : ObjCBool = false
+                if fm.fileExists(atPath: p.first! + "/reddit/" + sub , isDirectory: &isDir), isDir.boolValue {
+                    objects.append(sub)
+                }
+            }
+        }
+        
         // Do any additional setup after loading the view, typically from a nib.
         navigationItem.leftBarButtonItem = editButtonItem
 
