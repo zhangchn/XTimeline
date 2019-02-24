@@ -76,6 +76,15 @@ class ThumbViewController: UITableViewController {
         }
     }
     
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "showDetail", let nav = segue.destination as? UINavigationController, let vc = nav.viewControllers.first as? DetailViewController {
+            if let indexPath = tableView.indexPathForSelectedRow {
+                vc.detailItem = imageList[indexPath.row]
+            }
+            
+        }
+    }
+    
     override func numberOfSections(in tableView: UITableView) -> Int {
         return 1
     }
