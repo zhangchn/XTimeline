@@ -50,6 +50,11 @@ class DetailViewController: UIViewController {
                             scrollView.contentSize = imageView.image!.size
                             widthConstraint.constant = imageView.image!.size.width
                             heightConstraint.constant = imageView.image!.size.height
+                            if size.width / size.height > scrollView.frame.width / scrollView.frame.height {
+                                // Add some insets at bottom/top
+                                let inset = (scrollView.frame.height - scrollView.frame.width * size.height / size.width) / 2
+                                scrollView.contentInset = UIEdgeInsets(top: inset, left: 0, bottom: inset, right: 0)
+                            }
                         case "mp4":
                             playerController?.player = AVPlayer(url: cacheUrl)
                             playerController?.view.isHidden = false
