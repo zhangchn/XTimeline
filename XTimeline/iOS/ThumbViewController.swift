@@ -34,6 +34,13 @@ class ThumbViewController: UITableViewController {
         configuration.httpAdditionalHeaders = [
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:64.0) Gecko/20100101 Firefox/64.0"
         ]
+        #if targetEnvironment(simulator)
+        configuration.connectionProxyDictionary = [
+            kCFStreamPropertySOCKSProxyHost: "127.0.0.1",
+            kCFStreamPropertySOCKSProxyPort: 1080,
+            kCFStreamPropertySOCKSVersion: kCFStreamSocketSOCKSVersion5
+        ]
+        #endif
         session = URLSession(configuration: configuration)
         title = name
         
