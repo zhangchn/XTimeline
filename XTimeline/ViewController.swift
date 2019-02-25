@@ -78,6 +78,7 @@ class ViewController: NSViewController {
         let fm = FileManager.default
         let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         var created = fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name)
+        let external = created
         if !created {
             let dest = downloadPath + "/reddit/.external/" + name
             do {
@@ -102,7 +103,7 @@ class ViewController: NSViewController {
                 }
             }
         }
-        loader = RedditLoader(name: name, session: session)
+        loader = RedditLoader(name: name, session: session, external: external)
         loader.loadFirstPage { (entities: [ImageEntity]) in
             self.imageList = entities
             DispatchQueue.main.async {
