@@ -46,11 +46,11 @@ fileprivate func previewSize(for child: RedditLoader.SubredditPage.Child.ChildDa
 }
 typealias ChildData = RedditLoader.SubredditPage.Child.ChildData
 fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
-    let (c, after) = children(from: json, url: url)
+    let (c, after) = children(from: json)
     return entities(from: c, url: url, after: after)
 }
 
-fileprivate func entities(from children: [ChildData], url: URL, after: String?) -> [LoadableImageEntity] {
+fileprivate func entities(from children: [ChildData], url pageUrl: URL?, after: String?) -> [LoadableImageEntity] {
     var results = children.compactMap({ (child) -> (String, ChildData)? in
         let d = child
         if d.isSelf ?? false {
@@ -101,10 +101,10 @@ fileprivate func entities(from children: [ChildData], url: URL, after: String?) 
             
     }
     
-    if let after = after {
-        let path = url.path
-        let schema = url.scheme!
-        let host = url.host!
+    if let after = after, let pageUrl = pageUrl {
+        let path = pageUrl.path
+        let schema = pageUrl.scheme!
+        let host = pageUrl.host!
         
         let nextUrl = URL(string: "\(schema)://\(host)\(path)?count=25&after=\(after)")!
         results.append(LoadableImageEntity.batchPlaceHolder(nextUrl, false))
@@ -112,7 +112,7 @@ fileprivate func entities(from children: [ChildData], url: URL, after: String?) 
     return results
 }
 
-fileprivate func children(from json: Data, url: URL) -> ([ChildData], String?) {
+fileprivate func children(from json: Data) -> ([ChildData], String?) {
     let decoder = JSONDecoder()
     decoder.keyDecodingStrategy = .convertFromSnakeCase
     do {
@@ -127,7 +127,7 @@ fileprivate func children(from json: Data, url: URL) -> ([ChildData], String?) {
 
 
 
-final class RedditLoader: AbstractImageLoader {
+class RedditLoader: AbstractImageLoader {
     class DBWrapper {
         typealias DBHandle = OpaquePointer?
         typealias Statement = OpaquePointer?
@@ -230,6 +230,42 @@ final class RedditLoader: AbstractImageLoader {
                 sqlite3_reset(self.queryStmt2)
                 completion(result)
             }
+        }
+        
+        func queryBatch(after: String?, count: Int, skip: Int = 0) -> [(String, String)] /*[(post_id, hash)]*/ {
+            var result :[(String, String)] = []
+            let query1 = "SELECT post_id, hash FROM rdt_child_data WHERE post_id >= ? ORDER BY post_id LIMIT ?, ?;"
+            q.sync {
+                try? query1.withCString({ (cstr) in
+                
+                    var stmt = Statement(nilLiteral: ())
+                    guard sqlite3_prepare_v2(dbHandle, cstr, Int32(query1.lengthOfBytes(using: .utf8)), &stmt, nil) == SQLITE_OK else {
+                        throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed preparing query1"])
+                    }
+                    let after = after ?? ""
+                    guard after.withCString({ (afterStr) -> Bool in
+                        guard sqlite3_bind_text(stmt, 1, afterStr, Int32(strlen(afterStr)), nil) == SQLITE_OK &&
+                            sqlite3_bind_int(stmt, 2, Int32(count)) == SQLITE_OK &&
+                            sqlite3_bind_int(stmt, 3, Int32(skip)) == SQLITE_OK else {
+                                return false
+                        }
+                        return true
+                    }) else {
+                        throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed binding query1"])
+                    }
+                    
+                    while (sqlite3_step(stmt) == SQLITE_ROW) {
+                        if let pIdStr = sqlite3_column_text(stmt, 0),
+                            let hashStr = sqlite3_column_text(stmt, 1) {
+                            let pId = String(cString: pIdStr)
+                            let hash = String(cString: hashStr)
+                            result.append((pId, hash))
+                        }
+                    }
+                    _ = sqlite3_finalize(stmt)
+                })
+            }
+            return result
         }
         func save(sub: String, url: String, postId: String, hash: String) {
             q.async {
@@ -380,7 +416,7 @@ final class RedditLoader: AbstractImageLoader {
             if let data = data {
                 //return completion(entities(from: data, url: url))
 
-                let (ch, aft) = children(from: data, url: url)
+                let (ch, aft) = children(from: data)
                 if saveCache {
                     let hash = UUID().uuidString
                     let path = downPath + "/" + hash + ".json"
@@ -524,7 +560,7 @@ final class RedditLoader: AbstractImageLoader {
         let task = session.dataTask(with: firstPageUrl) {
             (data, response, error) in
             if let data = data {
-                let (ch, aft) = children(from: data, url: firstPageUrl)
+                let (ch, aft) = children(from: data)
                 
                 if saveCache {
                     let hash = UUID().uuidString
@@ -546,5 +582,32 @@ final class RedditLoader: AbstractImageLoader {
             return completion([])
         }
         task.resume()
+    }
+}
+
+final class OfflineRedditLoader: RedditLoader {
+    override func loadFirstPage(completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
+        let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
+        DispatchQueue.global().async {
+            var jsons = [String: [ChildData]]()
+            let list = self.sqlite.queryBatch(after: nil, count: 10)
+            var result: [RedditLoader.EntityKind] = list.compactMap { (pair) -> RedditLoader.EntityKind? in
+                var d = jsons[pair.1]
+                if d == nil {
+                    do {
+                        let cached = try Data(contentsOf: URL(fileURLWithPath: downPath + "/" + pair.1 + ".json"))
+                        let (cachedChildren, _) = children(from: cached)
+                        jsons[pair.1] = cachedChildren
+                        d = cachedChildren
+                    } catch {
+                        return nil
+                    }
+                }
+                return entities(from: d!.filter({ (cd) -> Bool in
+                    cd.id == pair.0
+                }), url: nil, after: nil).first
+            }
+            
+        }
     }
 }
