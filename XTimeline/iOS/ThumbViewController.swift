@@ -51,6 +51,7 @@ class ThumbViewController: UITableViewController {
             let dest = downloadPath + "/reddit/.external/" + name
             do {
                 try fm.createDirectory(atPath: dest, withIntermediateDirectories: false, attributes: nil)
+                try fm.createDirectory(atPath: dest + "/.json", withIntermediateDirectories: true, attributes: nil)
                 created = true
             } catch _ {
                 
@@ -61,6 +62,7 @@ class ThumbViewController: UITableViewController {
             if !fm.fileExists(atPath: path) {
                 do {
                     try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+                    try fm.createDirectory(atPath: path + "/.json", withIntermediateDirectories: true, attributes: nil)
                 } catch let err {
                     let alert = UIAlertController(title: "Error", message: err.localizedDescription, preferredStyle: .alert)
                     alert.addAction(UIAlertAction(title: "OK", style: .cancel, handler: { (_) in

@@ -44,77 +44,85 @@ fileprivate func previewSize(for child: RedditLoader.SubredditPage.Child.ChildDa
     }
     return nil
 }
-
+typealias ChildData = RedditLoader.SubredditPage.Child.ChildData
 fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
-    let decoder = JSONDecoder()
-    decoder.keyDecodingStrategy = .convertFromSnakeCase
-    do {
-        typealias ChildData = RedditLoader.SubredditPage.Child.ChildData
-        let doc = try decoder.decode(RedditLoader.SubredditPage.self, from: json)
-        var results = doc.data.children.compactMap({ (child) -> (String, ChildData)? in
-            let d = child.data
-            if d.isSelf ?? false {
-                return nil
-            }
-            if d.isRedditMediaDomain ?? false, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
-                if domain.hasSuffix("v.redd.it"), let videoPreview = d.media?.redditVideo {
-                    if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
-                        return (url, d)
-                    }
-                }
-                return (url, d)
-            }
-            if let media = d.media, let tn = media.oembed?.thumbnailUrl {
-                if tn.hasPrefix("https://i.imgur.com/"), tn.hasSuffix(".jpg?fbplay") {
-                    let url = tn.replacingOccurrences(of: ".jpg?fbplay", with: ".mp4")
-                    return (url, d)
-                }
-            }
-            if let videoPreview = d.preview?.redditVideoPreview {
+    let (c, after) = children(from: json, url: url)
+    return entities(from: c, url: url, after: after)
+}
+
+fileprivate func entities(from children: [ChildData], url: URL, after: String?) -> [LoadableImageEntity] {
+    var results = children.compactMap({ (child) -> (String, ChildData)? in
+        let d = child
+        if d.isSelf ?? false {
+            return nil
+        }
+        if d.isRedditMediaDomain ?? false, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
+            if domain.hasSuffix("v.redd.it"), let videoPreview = d.media?.redditVideo {
                 if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
                     return (url, d)
                 }
             }
-            if let resolutions = d.preview?.images?.first?.resolutions {
-                return resolutions.max(by: { $0.width * $0.height < $1.width * $1.height })?.url.map { ($0, d) }
+            return (url, d)
+        }
+        if let media = d.media, let tn = media.oembed?.thumbnailUrl {
+            if tn.hasPrefix("https://i.imgur.com/"), tn.hasSuffix(".jpg?fbplay") {
+                let url = tn.replacingOccurrences(of: ".jpg?fbplay", with: ".mp4")
+                return (url, d)
             }
-            return child.data.preview?.images?.first?.source?.url.map {($0, d)}
-        }).map {
-            ($0.0.replacingOccurrences(of: "&amp;", with: "&"), $0.1)
-            } .compactMap{ (u, d) -> (URL, ChildData)? in
-                URL(string: u).map { ($0, d) }
-            } .map { (u: URL, d: ChildData) -> LoadableImageEntity in
-                let attr : [String: Any] = previewSize(for: d).map { (size: CGSize) -> [String: Any] in
-                    ["title": d.title ?? "",
-                     "author": d.author ?? "",
-                     "text": d.selftext ?? "",
-                     "domain": d.domain ?? "",
-                     "size": size]
-                    } ??
-                    ["title": d.title ?? "",
-                     "author": d.author ?? "",
-                     "text": d.selftext ?? "",
-                     "domain": d.domain ?? ""]
-                return LoadableImageEntity.placeHolder(u,
-                                                false,
-                                                attr)
-                
         }
-        
-        if let after = doc.data.after {
-            let path = url.path
-            let schema = url.scheme!
-            let host = url.host!
+        if let videoPreview = d.preview?.redditVideoPreview {
+            if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
+                return (url, d)
+            }
+        }
+        if let resolutions = d.preview?.images?.first?.resolutions {
+            return resolutions.max(by: { $0.width * $0.height < $1.width * $1.height })?.url.map { ($0, d) }
+        }
+        return child.preview?.images?.first?.source?.url.map {($0, d)}
+    }).map {
+        ($0.0.replacingOccurrences(of: "&amp;", with: "&"), $0.1)
+        } .compactMap{ (u, d) -> (URL, ChildData)? in
+            URL(string: u).map { ($0, d) }
+        } .map { (u: URL, d: ChildData) -> LoadableImageEntity in
+            let attr : [String: Any] = previewSize(for: d).map { (size: CGSize) -> [String: Any] in
+                ["title": d.title ?? "",
+                 "author": d.author ?? "",
+                 "text": d.selftext ?? "",
+                 "domain": d.domain ?? "",
+                 "size": size]
+                } ??
+                ["title": d.title ?? "",
+                 "author": d.author ?? "",
+                 "text": d.selftext ?? "",
+                 "domain": d.domain ?? ""]
+            return LoadableImageEntity.placeHolder(u,
+                                                   false,
+                                                   attr)
             
-            let nextUrl = URL(string: "\(schema)://\(host)\(path)?count=25&after=\(after)")!
-            results.append(LoadableImageEntity.batchPlaceHolder(nextUrl, false))
-        }
-        return results
+    }
+    
+    if let after = after {
+        let path = url.path
+        let schema = url.scheme!
+        let host = url.host!
+        
+        let nextUrl = URL(string: "\(schema)://\(host)\(path)?count=25&after=\(after)")!
+        results.append(LoadableImageEntity.batchPlaceHolder(nextUrl, false))
+    }
+    return results
+}
+
+fileprivate func children(from json: Data, url: URL) -> ([ChildData], String?) {
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    do {
+        let doc = try decoder.decode(RedditLoader.SubredditPage.self, from: json)
+        return (doc.data.children.map { $0.data }, doc.data.after)
         
     } catch let err {
         print(err)
     }
-    return []
+    return ([], nil)
 }
 
 
@@ -124,12 +132,12 @@ final class RedditLoader: AbstractImageLoader {
         typealias DBHandle = OpaquePointer?
         typealias Statement = OpaquePointer?
 
-        var dbHandle: DBHandle
+        var dbHandle: DBHandle = DBHandle(nilLiteral: ())
         var q : DispatchQueue = DispatchQueue(label: "dbq")
         
-        var queryStmt1 : Statement
-        var queryStmt2 : Statement
-        var saveStmt: Statement
+        var queryStmt1 = Statement(nilLiteral: ())
+        var queryStmt2 = Statement(nilLiteral: ())
+        var saveStmt = Statement(nilLiteral: ())
 
         init(external: Bool) throws {
             //self.subreddit = subreddit
@@ -141,9 +149,10 @@ final class RedditLoader: AbstractImageLoader {
                 }
             }
             
-            let initSql = "CREATE TABLE IF NOT EXISTS rdt_child_data (url text, hash text, sub text, post_id text);"
+            let initSql = "CREATE TABLE IF NOT EXISTS rdt_child_data (url text, hash text, sub text, post_id text UNIQUE);"
+            
             try initSql.withCString { (initCStr) in
-                var statement : Statement
+                var statement = Statement(nilLiteral: ())
                 guard sqlite3_prepare_v2(dbHandle, initCStr, Int32(initSql.lengthOfBytes(using: .utf8)), &statement, nil) == SQLITE_OK else {
                     throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed prepare initSql"])
                 }
@@ -154,7 +163,7 @@ final class RedditLoader: AbstractImageLoader {
             
             let indexSql = "CREATE INDEX IF NOT EXISTS rdt_sub_post ON rdt_child_data (sub, post_id);"
             try indexSql.withCString { (initCStr) in
-                var statement : Statement
+                var statement = Statement(nilLiteral: ())
                 guard sqlite3_prepare_v2(dbHandle, initCStr, Int32(indexSql.lengthOfBytes(using: .utf8)), &statement, nil) == SQLITE_OK else {
                     throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed prepare indexSql"])
                 }
@@ -176,7 +185,7 @@ final class RedditLoader: AbstractImageLoader {
                 }
             })
             
-            let save = "INSERT INTO rdt_child_data (sub, url, post_id, hash) VALUES (?, ?, ?, ?);"
+            let save = "INSERT OR REPLACE INTO rdt_child_data (sub, url, post_id, hash) VALUES (?, ?, ?, ?);"
             try save.withCString({ (cstr) in
                 guard sqlite3_prepare_v2(dbHandle, cstr, Int32(save.lengthOfBytes(using: .utf8)), &self.saveStmt, nil) == SQLITE_OK else {
                     throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed prepare savestmt"])
@@ -241,6 +250,9 @@ final class RedditLoader: AbstractImageLoader {
                                 guard sqlite3_bind_text(self.saveStmt, 4, hashStr, Int32(hash.utf8.count), nil) == SQLITE_OK else {
                                     return
                                 }
+//                                guard sqlite3_bind_text(self.saveStmt, 5, postStr, Int32(postId.utf8.count), nil) == SQLITE_OK else {
+//                                    return
+//                                }
                                 sqlite3_step(self.saveStmt)
                             }
                         }
@@ -342,6 +354,7 @@ final class RedditLoader: AbstractImageLoader {
                 let selftext: String?
                 let preview: Preview?
                 let url: String?
+                let permalink: String?
                 let domain: String?
                 let isRedditMediaDomain: Bool?
                 let isSelf: Bool?
@@ -360,9 +373,30 @@ final class RedditLoader: AbstractImageLoader {
         let url: String?
     }
     override func loadNextBatch(with url: URL, completion: @escaping ([EntityKind]) -> ()) {
+        let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
+        let saveCache = fileManager.fileExists(atPath: downPath)
+
         let task = session.dataTask(with: url) { data, response, err in
             if let data = data {
-                return completion(entities(from: data, url: url))
+                //return completion(entities(from: data, url: url))
+
+                let (ch, aft) = children(from: data, url: url)
+                if saveCache {
+                    let hash = UUID().uuidString
+                    let path = downPath + "/" + hash + ".json"
+                    do {
+                        try data.write(to: URL(fileURLWithPath: path))
+                        _ = ch.map { (d) in
+                            if let link = d.permalink, let id = d.id {
+                                self.sqlite.save(sub: self.name, url: link, postId: id, hash: hash)
+                            }
+                        }
+                    } catch {
+                        
+                    }
+                }
+                
+                return completion(entities(from: ch, url: url, after: aft))
             }
             return completion([])
         }
@@ -485,11 +519,31 @@ final class RedditLoader: AbstractImageLoader {
     
     override func loadFirstPage(completion: @escaping ([EntityKind]) -> ()) {
         let firstPageUrl = URL(string: "https://www.reddit.com/r/\(name)/.json")!
+        let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
+        let saveCache = fileManager.fileExists(atPath: downPath)
         let task = session.dataTask(with: firstPageUrl) {
             (data, response, error) in
             if let data = data {
-                completion(entities(from: data, url: firstPageUrl))
+                let (ch, aft) = children(from: data, url: firstPageUrl)
+                
+                if saveCache {
+                    let hash = UUID().uuidString
+                    let path = downPath + "/" + hash + ".json"
+                    do {
+                        try data.write(to: URL(fileURLWithPath: path))
+                        _ = ch.map { (d) in
+                            if let link = d.permalink, let id = d.id {
+                                self.sqlite.save(sub: self.name, url: link, postId: id, hash: hash)
+                            }
+                        }
+                    } catch {
+                        
+                    }
+                }
+               
+                return completion(entities(from: ch, url: firstPageUrl, after: aft))
             }
+            return completion([])
         }
         task.resume()
     }
