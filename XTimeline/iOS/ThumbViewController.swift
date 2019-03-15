@@ -16,6 +16,8 @@ class ThumbViewController: UITableViewController {
     var loader: LoaderType!
     var session: URLSession!
     var sizeForImage: [URL: CGSize] = [:]
+    
+    var online = true
 
     fileprivate func dynamicSize(for imageSize: CGSize) -> CGSize {
         guard imageSize.width > 0, imageSize.height > 0 else {
@@ -84,6 +86,37 @@ class ThumbViewController: UITableViewController {
             }
         }
     }
+    
+    @IBAction func switchOnlineOffline(_ sender: Any) {
+        if online {
+            navigationItem.rightBarButtonItem?.isEnabled = false
+            online = false
+            generation += 1
+            loader = OfflineRedditLoader(name: name, session: session)
+            loader.loadFirstPage { (entities: [ImageEntity]) in
+                self.imageList = entities
+                DispatchQueue.main.async {
+                    self.navigationItem.rightBarButtonItem?.isEnabled = true
+                    self.navigationItem.rightBarButtonItem?.title = "Online"
+                    self.tableView.reloadData()
+                }
+            }
+        } else {
+            navigationItem.rightBarButtonItem?.isEnabled = false
+            online = true
+            generation += 1
+            loader = RedditLoader(name: name, session: session)
+            loader.loadFirstPage { (entities: [ImageEntity]) in
+                self.imageList = entities
+                DispatchQueue.main.async {
+                    self.navigationItem.rightBarButtonItem?.isEnabled = true
+                    self.navigationItem.rightBarButtonItem?.title = "Offline"
+                    self.tableView.reloadData()
+                }
+            }
+        }
+    }
+    
     
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "showDetail", let nav = segue.destination as? UINavigationController, let vc = nav.viewControllers.first as? DetailViewController {

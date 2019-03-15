@@ -14,10 +14,15 @@ class OpenViewController : NSViewController {
     @IBOutlet weak var userField: NSTextField!
     
     @IBAction func commit(_ sender: Any) {
-        if kindSelector.indexOfSelectedItem == 0 {
+        switch kindSelector.indexOfSelectedItem {
+        case 0:
             viewController.setUpRedditLoader(name: userField.stringValue)
-        } else {
+        case 1:
+            viewController.setUpRedditLoader(name: userField.stringValue, offline: true)
+        case 2:
             viewController.setUpTwitterMediaLoader(name: userField.stringValue)
+        default:
+            break
         }
         viewController.dismiss(self)
     }

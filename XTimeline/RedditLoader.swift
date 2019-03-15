@@ -232,9 +232,9 @@ class RedditLoader: AbstractImageLoader {
             }
         }
         
-        func queryBatch(after: String?, count: Int, skip: Int = 0) -> [(String, String)] /*[(post_id, hash)]*/ {
+        func queryBatch(after: String = "", count: Int) -> [(String, String)] /*[(post_id, hash)]*/ {
             var result :[(String, String)] = []
-            let query1 = "SELECT post_id, hash FROM rdt_child_data WHERE post_id >= ? ORDER BY post_id LIMIT ?, ?;"
+            let query1 = "SELECT post_id, hash FROM rdt_child_data WHERE post_id > ? ORDER BY post_id LIMIT ?;"
             q.sync {
                 try? query1.withCString({ (cstr) in
                 
@@ -242,11 +242,10 @@ class RedditLoader: AbstractImageLoader {
                     guard sqlite3_prepare_v2(dbHandle, cstr, Int32(query1.lengthOfBytes(using: .utf8)), &stmt, nil) == SQLITE_OK else {
                         throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed preparing query1"])
                     }
-                    let after = after ?? ""
+                    
                     guard after.withCString({ (afterStr) -> Bool in
                         guard sqlite3_bind_text(stmt, 1, afterStr, Int32(strlen(afterStr)), nil) == SQLITE_OK &&
-                            sqlite3_bind_int(stmt, 2, Int32(count)) == SQLITE_OK &&
-                            sqlite3_bind_int(stmt, 3, Int32(skip)) == SQLITE_OK else {
+                            sqlite3_bind_int(stmt, 2, Int32(count)) == SQLITE_OK else {
                                 return false
                         }
                         return true
@@ -590,7 +589,7 @@ final class OfflineRedditLoader: RedditLoader {
         let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
         DispatchQueue.global().async {
             var jsons = [String: [ChildData]]()
-            let list = self.sqlite.queryBatch(after: nil, count: 10)
+            let list = self.sqlite.queryBatch(count: 10)
             var result: [RedditLoader.EntityKind] = list.compactMap { (pair) -> RedditLoader.EntityKind? in
                 var d = jsons[pair.1]
                 if d == nil {
@@ -607,7 +606,78 @@ final class OfflineRedditLoader: RedditLoader {
                     cd.id == pair.0
                 }), url: nil, after: nil).first
             }
-            
+            if let l = list.last, let placeHolderUrl = URL(string: "after://\(self.name)/\(l.0)") {
+                result.append(RedditLoader.EntityKind.batchPlaceHolder(placeHolderUrl, false))
+            }
+            completion(result)
+        }
+    }
+    
+    override func loadNextBatch(with url: URL, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
+        guard let scheme = url.scheme, scheme == "after" else {
+            return completion([])
+        }
+        let p = url.path
+        let idx = p.index(after: p.startIndex)
+        let after = p.suffix(from: idx)
+        
+        let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
+        DispatchQueue.global().async {
+            var jsons = [String: [ChildData]]()
+            let list = self.sqlite.queryBatch(after: String(after), count: 10)
+            var result: [RedditLoader.EntityKind] = list.compactMap { (pair) -> RedditLoader.EntityKind? in
+                var d = jsons[pair.1]
+                if d == nil {
+                    do {
+                        let cached = try Data(contentsOf: URL(fileURLWithPath: downPath + "/" + pair.1 + ".json"))
+                        let (cachedChildren, _) = children(from: cached)
+                        jsons[pair.1] = cachedChildren
+                        d = cachedChildren
+                    } catch {
+                        return nil
+                    }
+                }
+                return entities(from: d!.filter({ (cd) -> Bool in
+                    cd.id == pair.0
+                }), url: nil, after: nil).first
+            }
+            if let l = list.last, let placeHolderUrl = URL(string: "after://\(self.name)/\(l.0)") {
+                result.append(RedditLoader.EntityKind.batchPlaceHolder(placeHolderUrl, false))
+            }
+            completion(result)
+        }
+    }
+    override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes: [String : Any], completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
+        DispatchQueue.global().async {
+            if let cacheFileUrl = cacheFileUrl {
+                switch cacheFileUrl.pathExtension.lowercased() {
+                case "jpeg", "png", "gif", "jpg":
+                    #if os(macOS)
+                    
+                    if self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                    }
+                    
+                    #elseif os(iOS)
+                    
+                    if self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                        var attributes = attributes
+                        if let img = UIImage(contentsOfFile: cacheFileUrl.path) {
+                            attributes["size"] = img.size
+                            return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                        }
+                    }
+                    
+                    #endif
+                case "mp4":
+                    if self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                    }
+                default:
+                    break
+                }
+            }
+            return completion([])
         }
     }
 }

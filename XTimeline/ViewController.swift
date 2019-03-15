@@ -72,7 +72,7 @@ class ViewController: NSViewController {
         
     }
 
-    func setUpRedditLoader(name: String) {
+    func setUpRedditLoader(name: String, offline: Bool = false) {
         self.name = name
         self.view.window?.title = name
         let fm = FileManager.default
@@ -103,7 +103,11 @@ class ViewController: NSViewController {
                 }
             }
         }
-        loader = RedditLoader(name: name, session: session, external: external)
+        if offline {
+            loader = OfflineRedditLoader(name: name, session: session, external: external)
+        } else {
+            loader = RedditLoader(name: name, session: session, external: external)
+        }
         loader.loadFirstPage { (entities: [ImageEntity]) in
             self.imageList = entities
             DispatchQueue.main.async {
