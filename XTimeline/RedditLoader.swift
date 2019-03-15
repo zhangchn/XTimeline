@@ -232,9 +232,9 @@ class RedditLoader: AbstractImageLoader {
             }
         }
         
-        func queryBatch(after: String = "", count: Int) -> [(String, String)] /*[(post_id, hash)]*/ {
+        func queryBatch(sub: String, after: String = "", count: Int) -> [(String, String)] /*[(post_id, hash)]*/ {
             var result :[(String, String)] = []
-            let query1 = "SELECT post_id, hash FROM rdt_child_data WHERE post_id > ? ORDER BY post_id LIMIT ?;"
+            let query1 = "SELECT post_id, hash FROM rdt_child_data WHERE sub = ?1 AND post_id > ?2 ORDER BY post_id LIMIT ?3;"
             q.sync {
                 try? query1.withCString({ (cstr) in
                 
@@ -244,22 +244,30 @@ class RedditLoader: AbstractImageLoader {
                     }
                     
                     guard after.withCString({ (afterStr) -> Bool in
-                        guard sqlite3_bind_text(stmt, 1, afterStr, Int32(strlen(afterStr)), nil) == SQLITE_OK &&
-                            sqlite3_bind_int(stmt, 2, Int32(count)) == SQLITE_OK else {
+                        guard sub.withCString({(subStr) -> Bool in
+                            let r1 = sqlite3_bind_text(stmt, 1, subStr, Int32(strlen(subStr)), nil)
+                            let r2 = sqlite3_bind_text(stmt, 2, afterStr, Int32(strlen(afterStr)), nil)
+                            let r3 = sqlite3_bind_int(stmt, 3, Int32(count))
+                            guard  (r1 == SQLITE_OK) && (r2 == SQLITE_OK) && (r3 == SQLITE_OK) else {
                                 return false
-                        }
+                            }
+                            var r : Int32
+                            r = sqlite3_step(stmt)
+                            while (r == SQLITE_ROW) {
+                                if let pIdStr = sqlite3_column_text(stmt, 0),
+                                    let hashStr = sqlite3_column_text(stmt, 1) {
+                                    let pId = String(cString: pIdStr)
+                                    let hash = String(cString: hashStr)
+                                    result.append((pId, hash))
+                                }
+                                r = sqlite3_step(stmt)
+                            }
+                            
+                            return true
+                        }) else {return false}
                         return true
                     }) else {
                         throw NSError(domain: "DBWrapper", code: 1, userInfo: [NSLocalizedFailureReasonErrorKey: "Failed binding query1"])
-                    }
-                    
-                    while (sqlite3_step(stmt) == SQLITE_ROW) {
-                        if let pIdStr = sqlite3_column_text(stmt, 0),
-                            let hashStr = sqlite3_column_text(stmt, 1) {
-                            let pId = String(cString: pIdStr)
-                            let hash = String(cString: hashStr)
-                            result.append((pId, hash))
-                        }
                     }
                     _ = sqlite3_finalize(stmt)
                 })
@@ -589,7 +597,7 @@ final class OfflineRedditLoader: RedditLoader {
         let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
         DispatchQueue.global().async {
             var jsons = [String: [ChildData]]()
-            let list = self.sqlite.queryBatch(count: 10)
+            let list = self.sqlite.queryBatch(sub: self.name, count: 10)
             var result: [RedditLoader.EntityKind] = list.compactMap { (pair) -> RedditLoader.EntityKind? in
                 var d = jsons[pair.1]
                 if d == nil {
@@ -624,7 +632,7 @@ final class OfflineRedditLoader: RedditLoader {
         let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
         DispatchQueue.global().async {
             var jsons = [String: [ChildData]]()
-            let list = self.sqlite.queryBatch(after: String(after), count: 10)
+            let list = self.sqlite.queryBatch(sub: self.name, after: String(after), count: 10)
             var result: [RedditLoader.EntityKind] = list.compactMap { (pair) -> RedditLoader.EntityKind? in
                 var d = jsons[pair.1]
                 if d == nil {
@@ -647,6 +655,7 @@ final class OfflineRedditLoader: RedditLoader {
             completion(result)
         }
     }
+    /*
     override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes: [String : Any], completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         DispatchQueue.global().async {
             if let cacheFileUrl = cacheFileUrl {
@@ -680,4 +689,5 @@ final class OfflineRedditLoader: RedditLoader {
             return completion([])
         }
     }
+ */
 }
