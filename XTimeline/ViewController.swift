@@ -61,8 +61,8 @@ class ViewController: NSViewController {
 
         session = URLSession(configuration: configuration)
         
-        //selectionRectangle.isHidden = true
-        selectionRectangle.wantsLayer = true
+        selectionRectangle.isHidden = true
+        //selectionRectangle.wantsLayer = true
         selectionRectangle.layer?.borderColor = NSColor.white.withAlphaComponent(0.7).cgColor
         selectionRectangle.layer?.borderWidth = 2
         bottomCollectionView.register(ThumbnailItem.self, forItemWithIdentifier: itemId)

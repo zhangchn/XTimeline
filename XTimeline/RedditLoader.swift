@@ -419,7 +419,8 @@ class RedditLoader: AbstractImageLoader {
         let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
         let saveCache = fileManager.fileExists(atPath: downPath)
 
-        let task = session.dataTask(with: url) { data, response, err in
+        let task = session.dataTask(with: url) { [weak self] data, response, err in
+            guard let self = self else { return }
             if let data = data {
                 //return completion(entities(from: data, url: url))
 
@@ -452,83 +453,49 @@ class RedditLoader: AbstractImageLoader {
             url.host!.hasSuffix(".redditmedia.com")
         let s = useRedditSession ? redditSession : session
         //let fileName = url.lastPathComponent
-        let task = s.downloadTask(with: url) { (fileUrl, response, err) in
+        let task = s.downloadTask(with: url) { [weak self] (fileUrl, response, err)  in
+            guard let self = self else {return}
             if let err = err {
                 print("error loading \(url.absoluteString): \(err.localizedDescription)")
             }
             if let fileUrl = fileUrl, let cacheFileUrl = cacheFileUrl {
                 let contentType = (response as! HTTPURLResponse).allHeaderFields["Content-Type"] as? String
                 print("did fetch: \(url); " + (contentType.map { "type: " + $0 } ?? ""))
-                switch contentType {
-                case "image/jpeg", "image/png", "image/gif":
-                    #if os(macOS)
-                    if let _ = NSImage(contentsOf: fileUrl) {
-                        if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
-                            try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
-                        }
-                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
-                    }
-                    #elseif os(iOS)
-                    if let img = UIImage(contentsOfFile: fileUrl.path) {
-                        if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
-                            try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
-                        }
-                        var attributes = attributes
-                        attributes["size"] = img.size
-                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
-                    }
-                    #endif
-                case "video/mp4":
-                    
-                    if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
-                        
-                        try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
-                        generateThumbnail(for: url, cacheFileUrl: cacheFileUrl, attributes: attributes, completion: completion)
-                        /*
-                        let asset = AVAsset(url: cacheFileUrl)
-                        asset.loadValuesAsynchronously(forKeys: ["playable"], completionHandler: {
-                            switch asset.statusOfValue(forKey: "playable", error: nil) {
-                            case .loaded:
-                                let igen = AVAssetImageGenerator(asset: asset)
-                                let time = CMTime(seconds: asset.duration.seconds * 0.33, preferredTimescale: asset.duration.timescale)
-                                let videoThumb = URL(fileURLWithPath: cacheFileUrl.path).appendingPathExtension("vthumb")
-                                
-                                if let image = try? igen.copyCGImage(at: time, actualTime: nil),
-                                    let dest = CGImageDestinationCreateWithURL(videoThumb as CFURL, kUTTypePNG, 1, nil) {
-                                    CGImageDestinationAddImage(dest, image, nil)
-                                    CGImageDestinationFinalize(dest)
-                                }
-                                return completion([EntityKind.image(url, cacheFileUrl, attributes)])
-                            case .failed:
-                                return completion([EntityKind.image(url, cacheFileUrl, attributes)])
-                            default:
-                                break
+                
+                return autoreleasepool(invoking: { ()->() in
+                    switch contentType {
+                    case "image/jpeg", "image/png", "image/gif":
+                        #if os(macOS)
+                        if let _ = NSImage(contentsOf: fileUrl) {
+                            if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                                try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                             }
-                        })
-                         */
+                            return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                        }
+                        #elseif os(iOS)
+                        if let img = UIImage(contentsOfFile: fileUrl.path) {
+                            if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                                try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                            }
+                            var attributes = attributes
+                            attributes["size"] = img.size
+                            return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                        }
+                        #endif
+                        return completion([])
+                    case "video/mp4":
                         
-                    } else {
-                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                        if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                            
+                            try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                            generateThumbnail(for: url, cacheFileUrl: cacheFileUrl, attributes: attributes, completion: completion)
+                        } else {
+                            return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                        }
+                    default:
+                        return completion([])
                     }
-                default:
-                    break
-                }
-                /*
-                if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".gif"),
-                    let _ = NSImage(contentsOf: fileUrl) {
-                    if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
-                        try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
-                    }
-                    return completion([EntityKind.image(url, cacheFileUrl)])
-                }
-                if contentType?.contains("video/mp4") ?? false {
-                    if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
-                        try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
-                    }
-                    return completion([EntityKind.image(url, cacheFileUrl)])
-                }
-                */
-                //return completion([EntityKind.image(image)])
+                })
             }
             return completion([])
         }
@@ -536,24 +503,26 @@ class RedditLoader: AbstractImageLoader {
     }
     
     override func loadCachedPlaceHolder(with url: URL, attributes: [String: Any]) -> EntityKind? {
-        let cacheFileUrl = cacheFunc(url)
-        if let cacheFileUrl = cacheFileUrl {
-            if cacheFileUrl.pathExtension == "mp4" {
-                if fileManager.fileExists(atPath: cacheFileUrl.path) {
+        return autoreleasepool { () -> EntityKind? in
+            let cacheFileUrl = cacheFunc(url)
+            if let cacheFileUrl = cacheFileUrl {
+                if cacheFileUrl.pathExtension == "mp4" {
+                    if fileManager.fileExists(atPath: cacheFileUrl.path) {
+                        return EntityKind.image(url, cacheFileUrl, attributes)
+                    }
+                }
+                #if os(macOS)
+                if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
                     return EntityKind.image(url, cacheFileUrl, attributes)
                 }
+                #elseif os(iOS)
+                if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = UIImage(contentsOfFile: cacheFileUrl.path) {
+                    return EntityKind.image(url, cacheFileUrl, attributes)
+                }
+                #endif
             }
-            #if os(macOS)
-            if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
-                return EntityKind.image(url, cacheFileUrl, attributes)
-            }
-            #elseif os(iOS)
-            if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = UIImage(contentsOfFile: cacheFileUrl.path) {
-                return EntityKind.image(url, cacheFileUrl, attributes)
-            }
-            #endif
+            return nil
         }
-        return nil
     }
     
     override func cacheFileUrl(for url: URL) -> URL? {
@@ -565,7 +534,8 @@ class RedditLoader: AbstractImageLoader {
         let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
         let saveCache = fileManager.fileExists(atPath: downPath)
         let task = session.dataTask(with: firstPageUrl) {
-            (data, response, error) in
+            [weak self] (data, response, error) in
+            guard let self = self else { return }
             if let data = data {
                 let (ch, aft) = children(from: data)
                 
