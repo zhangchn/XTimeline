@@ -31,6 +31,7 @@
 		DB7358A822116F5D00150E4C /* AbstractEntityAndLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B97FD216A403F00A417AD /* AbstractEntityAndLoader.swift */; };
 		DB7358AB2211740200150E4C /* ThumbViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7358A9221173FE00150E4C /* ThumbViewController.swift */; };
 		DB7358AE2212569300150E4C /* AddViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7358AC2212568800150E4C /* AddViewController.swift */; };
+		DBF2E577223D243700C2BA4D /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBF2E576223D243700C2BA4D /* AVKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,6 +101,7 @@
 		DB73589D22114F6A00150E4C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DB7358A9221173FE00150E4C /* ThumbViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbViewController.swift; sourceTree = "<group>"; };
 		DB7358AC2212568800150E4C /* AddViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddViewController.swift; sourceTree = "<group>"; };
+		DBF2E576223D243700C2BA4D /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,6 +109,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DBF2E577223D243700C2BA4D /* AVKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,6 +160,7 @@
 				DB73588F22114F6A00150E4C /* XTimeline-iOSTests */,
 				DB73589A22114F6A00150E4C /* XTimeline-iOSUITests */,
 				DB1B97CE216A3F9200A417AD /* Products */,
+				DBF2E575223D243700C2BA4D /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -243,6 +247,14 @@
 				DB73589D22114F6A00150E4C /* Info.plist */,
 			);
 			path = "XTimeline-iOSUITests";
+			sourceTree = "<group>";
+		};
+		DBF2E575223D243700C2BA4D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				DBF2E576223D243700C2BA4D /* AVKit.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

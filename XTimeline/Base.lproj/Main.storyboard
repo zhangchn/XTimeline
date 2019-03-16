@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="14490.64" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="14490.68" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.AVKitIBPlugin" version="14490.64"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14490.64"/>
+        <plugIn identifier="com.apple.AVKitIBPlugin" version="14490.68"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14490.68"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -827,11 +827,11 @@ Gw
                                             <scrollView wantsLayer="YES" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" hasVerticalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="99p-GE-9TI">
                                                 <rect key="frame" x="0.0" y="0.0" width="480" height="61"/>
                                                 <clipView key="contentView" id="Qy1-Ep-LfD">
-                                                    <rect key="frame" x="1" y="1" width="478" height="48"/>
+                                                    <rect key="frame" x="1" y="1" width="478" height="59"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <subviews>
                                                         <collectionView id="JIW-Ve-fUP">
-                                                            <rect key="frame" x="0.0" y="0.0" width="478" height="48"/>
+                                                            <rect key="frame" x="0.0" y="0.0" width="478" height="59"/>
                                                             <autoresizingMask key="autoresizingMask" heightSizable="YES"/>
                                                             <collectionViewFlowLayout key="collectionViewLayout" minimumInteritemSpacing="10" scrollDirection="horizontal" id="hMN-Qi-QwB">
                                                                 <size key="itemSize" width="50" height="44"/>
@@ -845,8 +845,8 @@ Gw
                                                     </subviews>
                                                     <edgeInsets key="contentInsets" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
                                                 </clipView>
-                                                <scroller key="horizontalScroller" verticalHuggingPriority="750" controlSize="mini" horizontal="YES" id="rRf-M8-smV">
-                                                    <rect key="frame" x="1" y="49" width="478" height="11"/>
+                                                <scroller key="horizontalScroller" wantsLayer="YES" verticalHuggingPriority="750" controlSize="mini" horizontal="YES" id="rRf-M8-smV">
+                                                    <rect key="frame" x="1" y="46" width="478" height="14"/>
                                                     <autoresizingMask key="autoresizingMask"/>
                                                 </scroller>
                                                 <scroller key="verticalScroller" hidden="YES" verticalHuggingPriority="750" horizontal="NO" id="5lU-4J-Qld">
