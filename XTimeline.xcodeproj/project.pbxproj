@@ -378,13 +378,16 @@
 				TargetAttributes = {
 					DB1B97CC216A3F9200A417AD = {
 						CreatedOnToolsVersion = 10.0;
+						LastSwiftMigration = 1020;
 					};
 					DB1B97DE216A3F9500A417AD = {
 						CreatedOnToolsVersion = 10.0;
+						LastSwiftMigration = 1020;
 						TestTargetID = DB1B97CC216A3F9200A417AD;
 					};
 					DB1B97E9216A3F9500A417AD = {
 						CreatedOnToolsVersion = 10.0;
+						LastSwiftMigration = 1020;
 						TestTargetID = DB1B97CC216A3F9200A417AD;
 					};
 					DB73587622114F6900150E4C = {
@@ -716,7 +719,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.tgfbeta.XTimeline;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
@@ -733,7 +736,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.tgfbeta.XTimeline;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -752,7 +755,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.tgfbeta.XTimelineTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/XTimeline.app/Contents/MacOS/XTimeline";
 			};
 			name = Debug;
@@ -772,7 +775,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.tgfbeta.XTimelineTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/XTimeline.app/Contents/MacOS/XTimeline";
 			};
 			name = Release;
@@ -791,7 +794,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.tgfbeta.XTimelineUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TEST_TARGET_NAME = XTimeline;
 			};
 			name = Debug;
@@ -810,7 +813,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.tgfbeta.XTimelineUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TEST_TARGET_NAME = XTimeline;
 			};
 			name = Release;

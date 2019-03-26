@@ -184,7 +184,7 @@ final class TwitterLoader: AbstractImageLoader {
                             let out = str.split(separator: "\n").map {
                                 $0.hasPrefix("#") ? $0 : (playbackUrl.scheme! + "://" + playbackUrl.host! + $0)
                                 } .joined(separator: "\n")
-                            try? out.data(using: .utf8)?.write(to: cacheFileUrl)
+                            _ = try? out.data(using: .utf8)?.write(to: cacheFileUrl)
                         }
                     }
                     task2.resume()
