@@ -312,6 +312,9 @@ class RedditLoader: AbstractImageLoader {
             }
         }
     }
+    static var sharedExternalDB: DBWrapper!
+    static var sharedInternalDB: DBWrapper!
+    
     typealias EntityKind = LoadableImageEntity
 
     let name: String
@@ -327,7 +330,17 @@ class RedditLoader: AbstractImageLoader {
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .returnCacheDataElseLoad
         self.redditSession = URLSession(configuration: configuration)
-        try! self.sqlite = DBWrapper(external: external)
+        if external {
+            if RedditLoader.sharedExternalDB == nil {
+                RedditLoader.sharedExternalDB = try! DBWrapper(external: true)
+            }
+            self.sqlite = RedditLoader.sharedExternalDB
+        } else {
+            if RedditLoader.sharedInternalDB == nil {
+                RedditLoader.sharedInternalDB = try! DBWrapper(external: false)
+            }
+            self.sqlite = RedditLoader.sharedInternalDB
+        }
         self.cacheFunc = { (url: URL) -> URL?  in
             let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
             let fileName = url.lastPathComponent
