@@ -399,6 +399,12 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: NSCollectionView, layout collectionViewLayout: NSCollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> NSSize {
         let layout = collectionViewLayout as! NSCollectionViewFlowLayout
         let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
+        let height = max(collectionView.bounds.height - margin, 20)
+        let size = CGSize(width: height, height: height)
+        return size
+        /*
+        let layout = collectionViewLayout as! NSCollectionViewFlowLayout
+        let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
         switch imageList[indexPath.item] {
         case .image(let (url, cacheUrl, _ /* attributes */)):
             //let isVideo = attributes[TwitterLoader.VideoKey] as? Bool ?? false
@@ -429,6 +435,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
             let size = CGSize(width: height, height: height)
             return size
         }
+         */
     }
     /*
      func collectionView(_ collectionView: NSCollectionView, shouldSelectItemsAt indexPaths: Set<IndexPath>) -> Set<IndexPath> {
@@ -466,8 +473,45 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 }
             case .batchPlaceHolder:
                 break
-            case .placeHolder:
-                break
+            case .placeHolder(let p):
+                if let e = loader.loadCachedPlaceHolder(with: p.0, attributes: [:]) {
+                    switch e {
+                    case .image(let (_, cacheUrl, attributes)):
+                        if let img = attributes["thumbnail"] as? NSImage {
+                            self.topPlayerView.player?.pause()
+                            self.topPlayerView.isHidden = true
+                            self.topImageView.image = img
+                            if cacheUrl?.pathExtension == "gif" {
+                                self.topImageView.canDrawSubviewsIntoLayer = true
+                                self.topImageView.animates = true
+                            }
+                            
+                        }
+                    default:
+                        break
+                    }
+                }
+                /*
+                loader.loadPlaceHolder(with: p.0, cacheFileUrl: loader.cacheFileUrl(for: p.0), attributes: [:]) { (es) in
+                    if let e = es.first {
+                        switch e {
+                        case .image(let (_, cacheUrl, attributes)):
+                            if let img = attributes["thumbnail"] as? NSImage {
+                                self.topPlayerView.player?.pause()
+                                self.topPlayerView.isHidden = true
+                                self.topImageView.image = img
+                                if cacheUrl?.pathExtension == "gif" {
+                                    self.topImageView.canDrawSubviewsIntoLayer = true
+                                    self.topImageView.animates = true
+                                }
+                                
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+                */
             }
         }
     }
