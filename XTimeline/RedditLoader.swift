@@ -477,15 +477,30 @@ class RedditLoader: AbstractImageLoader {
                 
                 return autoreleasepool(invoking: { ()->() in
                     switch contentType {
-                    case "image/jpeg", "image/png", "image/gif":
                         #if os(macOS)
-                        if let _ = NSImage(contentsOf: fileUrl) {
-                            if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
-                                try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                    case "image/jpeg", "image/png":
+                        if let provider = fileUrl.path.withCString({ CGDataProvider(filename: $0)}) {
+                            let img: CGImage?
+                            if contentType == "image/jpeg" {
+                                img = CGImage(jpegDataProviderSource: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+                            } else {
+                                img = CGImage(pngDataProviderSource: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
                             }
-                            return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                            
+                            if let img = img {
+                                let nsImg = NSImage(cgImage: img, size: NSSize(width: img.width, height: img.height))
+                                if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                                    try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                                }
+                                var extendedAttr = attributes
+                                extendedAttr["thumbnail"] = nsImg
+                                //extendedAttr["size"] = NSSize(width: img.width, height: img.height)
+                                return completion([EntityKind.image(url, cacheFileUrl, extendedAttr)])
+                            }
                         }
+                        return completion([])
                         #elseif os(iOS)
+                    case "image/jpeg", "image/png", "image/gif":
                         if let img = UIImage(contentsOfFile: fileUrl.path) {
                             if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                                 try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
@@ -494,8 +509,8 @@ class RedditLoader: AbstractImageLoader {
                             attributes["size"] = img.size
                             return completion([EntityKind.image(url, cacheFileUrl, attributes)])
                         }
-                        #endif
                         return completion([])
+                        #endif
                     case "video/mp4":
                         
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
@@ -525,8 +540,30 @@ class RedditLoader: AbstractImageLoader {
                     }
                 }
                 #if os(macOS)
-                if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = NSImage(contentsOf: cacheFileUrl) {
-                    return EntityKind.image(url, cacheFileUrl, attributes)
+                if fileManager.fileExists(atPath: cacheFileUrl.path){
+                    if let provider = cacheFileUrl.path.withCString({CGDataProvider(filename: $0 )}) {
+                        var img : NSImage?
+                        switch url.pathExtension.lowercased() {
+                        case "jpeg", "jpg":
+                            if let i = CGImage(jpegDataProviderSource: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent) {
+                                img = NSImage(cgImage: i, size: NSSize(width: i.width, height: i.height))
+                            }
+                            
+                        case "png":
+                            if let i = CGImage(pngDataProviderSource: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent) {
+                                img = NSImage(cgImage: i, size: NSSize(width: i.width, height: i.height))
+                            }
+                        case "gif":
+                            img = NSImage(contentsOf: cacheFileUrl)
+                        default:
+                            break
+                        }
+                        if let img = img {
+                            var extendedAttr = attributes
+                            extendedAttr["thumbnail"] = img
+                            return EntityKind.image(url, cacheFileUrl, extendedAttr)
+                        }
+                    }
                 }
                 #elseif os(iOS)
                 if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = UIImage(contentsOfFile: cacheFileUrl.path) {

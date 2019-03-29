@@ -316,7 +316,7 @@ extension ViewController: NSCollectionViewDataSource {
                     // If cache is hit, the entity could have been changed
                     break
                 }
-            case .image(let (_, cacheUrl, _)):
+            case .image(let (url, cacheUrl, attr)):
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         let thumbUrl = cacheUrl.appendingPathExtension("vthumb")
@@ -324,7 +324,16 @@ extension ViewController: NSCollectionViewDataSource {
                             imageView.image = thumbnail
                         }
                     } else {
-                        imageView.image = NSImage(contentsOf: cacheUrl)
+                        if let thb: NSImage = attr["thumbnail"] as! NSImage? {
+                            imageView.image = thb
+                            var reducedAttr = attr
+                            reducedAttr.removeValue(forKey: "thumbnail")
+                            // invalidate the cgimage from cache immediately after showing it
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder(url, false, reducedAttr)
+                        } else {
+                            // fallback
+                            imageView.image = NSImage(contentsOf: cacheUrl)
+                        }
                     }
                 }
                 imageView.toolTip = self.toolTips[indexPath]
@@ -397,10 +406,14 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 let imageSize: CGSize?
                 if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                     let thumbUrl = cacheUrl.appendingPathExtension("vthumb")
-                    let thumbSize = sizeForImage[url] ?? NSImage(contentsOf: thumbUrl)?.size
+                    let thumbSize = autoreleasepool {
+                        sizeForImage[url] ?? NSImage(contentsOf: thumbUrl)?.size
+                    }
                     imageSize = thumbSize
                 } else {
-                    imageSize = sizeForImage[url] ?? NSImage(contentsOf: cacheUrl)?.size
+                    imageSize =  autoreleasepool {
+                        sizeForImage[url] ?? NSImage(contentsOf: cacheUrl)?.size
+                    }
                 }
                 if let s = imageSize {
                     sizeForImage[url] = s
