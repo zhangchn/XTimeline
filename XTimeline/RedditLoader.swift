@@ -234,7 +234,7 @@ class RedditLoader: AbstractImageLoader {
         
         func queryBatch(sub: String, after: String = "", count: Int) -> [(String, String)] /*[(post_id, hash)]*/ {
             var result :[(String, String)] = []
-            let query1 = "SELECT post_id, hash FROM rdt_child_data WHERE sub = ?1 AND post_id > ?2 ORDER BY post_id LIMIT ?3;"
+            let query1 = "SELECT post_id, MIN(hash) FROM rdt_child_data WHERE sub = ?1 AND post_id > ?2 GROUP BY post_id ORDER BY post_id LIMIT ?3;"
             q.sync {
                 try? query1.withCString({ (cstr) in
                 
