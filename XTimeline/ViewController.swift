@@ -36,6 +36,11 @@ class ViewController: NSViewController {
         }
     }
     var imageList : [ImageEntity] = []
+    var loadingItemCount = 0 {
+        didSet {
+            self.view.window?.title = (loadingItemCount == 0 ? "" : "(\(loadingItemCount))") + name
+        }
+    }
     //var cacheFunc: ((URL) -> URL?)!
     //@IBOutlet weak var topScrollView: NSScrollView!
     @IBOutlet weak var bottomCollectionView: NSCollectionView!
@@ -162,6 +167,7 @@ class ViewController: NSViewController {
     var generation : UInt = 0
     @IBAction func reload(_ sender: Any) {
         generation += 1
+        loadingItemCount = 0
         if generation == UInt.max {
             generation = 0
         }
@@ -348,9 +354,15 @@ extension ViewController: NSCollectionViewDataSource {
                 self.toolTips[indexPath] = toolTip
                 self.shortTips[indexPath] = domain + ": " + urlPath + " " + title
                 imageView.toolTip = toolTip
+                if !p.1 {
+                    self.loadingItemCount += 1
+                }
                 loader.load(entity: originalEntity) { (entities) in
                     guard previousGeneration == self.generation else {
                         return
+                    }
+                    DispatchQueue.main.async {
+                        self.loadingItemCount -= 1
                     }
                     guard !entities.isEmpty else {
                         DispatchQueue.main.async {
@@ -382,6 +394,7 @@ extension ViewController: NSCollectionViewDataSource {
                     // if cache is hit, the entity in imageList might have been changed!
                     // skip the following lines
                     imageView.image = nil
+                    //self.loadingItemCount -= 1
                     imageList[indexPath.item] = ImageEntity.placeHolder(p.0, true, p.2)
                     
                 default:
@@ -466,11 +479,12 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 } else {
                     topImageView.image = NSImage(contentsOf: imageUrl)
                 }
+                /*
                 if let shortTip = shortTips[indexPath] {
                     self.view.window?.title = name + ": " + shortTip
                 } else {
                     self.view.window?.title = name + ": ..."
-                }
+                }*/
             case .batchPlaceHolder:
                 break
             case .placeHolder(let p):
