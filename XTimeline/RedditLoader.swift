@@ -462,8 +462,8 @@ class RedditLoader: AbstractImageLoader {
     
     override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes: [String: Any], completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
-        let useRedditSession = url.host!.hasSuffix(".redd.it") ||
-            url.host!.hasSuffix(".redditmedia.com")
+        let useRedditSession = false // url.host!.hasSuffix(".redd.it") ||
+//            url.host!.hasSuffix(".redditmedia.com")
         let s = useRedditSession ? redditSession : session
         //let fileName = url.lastPathComponent
         let task = s.downloadTask(with: url) { [weak self] (fileUrl, response, err)  in
@@ -478,6 +478,7 @@ class RedditLoader: AbstractImageLoader {
                 return autoreleasepool(invoking: { ()->() in
                     switch contentType {
                         #if os(macOS)
+                        /*
                     case "image/jpeg", "image/png":
                         if let provider = fileUrl.path.withCString({ CGDataProvider(filename: $0)}) {
                             let img: CGImage?
@@ -496,6 +497,21 @@ class RedditLoader: AbstractImageLoader {
                                 extendedAttr["thumbnail"] = nsImg
                                 //extendedAttr["size"] = NSSize(width: img.width, height: img.height)
                                 return completion([EntityKind.image(url, cacheFileUrl, extendedAttr)])
+                            }
+                        }
+                        return completion([])
+                        */
+                    case  "image/jpeg", "image/png", "image/gif":
+                        if let d = try? Data(contentsOf: fileUrl) {
+                            if let img = NSBitmapImageRep(data: d)?.cgImage {
+                                let nsImg = NSImage(cgImage: img, size: NSSize(width: img.width, height: img.height))
+                                if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
+                                    try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                                }
+                                var extendedAttr = attributes
+                                extendedAttr["thumbnail"] = nsImg
+                                return completion([EntityKind.image(url, cacheFileUrl, extendedAttr)])
+
                             }
                         }
                         return completion([])

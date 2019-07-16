@@ -260,6 +260,7 @@ extension ViewController: NSCollectionViewDataSource {
     func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
         print("item for indexPath \(indexPath.item)")
         let item = collectionView.makeItem(withIdentifier: itemId, for: indexPath)
+        (item as? ThumbnailItem)?.isVideo = false
         let originalEntity = imageList[indexPath.item]
         let previousGeneration = generation
         if let imageView = item.imageView {
@@ -329,6 +330,8 @@ extension ViewController: NSCollectionViewDataSource {
                         if let thumbnail = NSImage(contentsOf: thumbUrl) {
                             imageView.image = thumbnail
                         }
+                        (item as? ThumbnailItem)?.isVideo = true
+                        //if let tItem = item as? ThumbnailItem { tItem.isVideo = true }
                     } else {
                         if let thb: NSImage = attr["thumbnail"] as! NSImage? {
                             imageView.image = thb

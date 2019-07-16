@@ -9,6 +9,16 @@
 import AppKit
 
 class ThumbnailItem : NSCollectionViewItem {
+    required init?(coder: NSCoder) {
+        isVideo = false
+        super.init(coder: coder)
+    }
+    override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) {
+        isVideo = false
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        
+    }
+    @IBOutlet weak var playableIcon: NSTextField!
     override var isSelected: Bool {
         didSet {
             if isSelected {
@@ -17,6 +27,11 @@ class ThumbnailItem : NSCollectionViewItem {
             } else {
                 self.imageView?.layer?.borderWidth = 0
             }
+        }
+    }
+    var isVideo: Bool {
+        didSet {
+            self.playableIcon.isHidden = !isVideo
         }
     }
 }
