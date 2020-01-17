@@ -46,6 +46,8 @@ class ViewController: NSViewController {
     @IBOutlet weak var bottomCollectionView: NSCollectionView!
     @IBOutlet weak var topImageView: NSImageView!
     @IBOutlet weak var topPlayerView: AVPlayerView!
+    @IBOutlet weak var topInfoLabel: NSTextField!
+    var topInfoLabelTimer: Timer?
     let itemId =  NSUserInterfaceItemIdentifier.init("thumb")
     
     typealias LoaderType = AbstractImageLoader
@@ -246,6 +248,16 @@ class ViewController: NSViewController {
     override func moveToBeginningOfDocument(_ sender: Any?) {
         // CMD + up
         bottomCollectionView.selectItems(at: [IndexPath(item: 0, section: 0)], scrollPosition: .left)
+    }
+    
+    func showTopInfo(_ attr: [String: Any]) {
+        topInfoLabel.stringValue = (attr["title"] as! String) + "\nBy: " + (attr["author"] as! String) + "\n" + (attr["text"] as! String)
+        topInfoLabel.isHidden = false
+        topInfoLabel.alphaValue = 0.85
+        topInfoLabelTimer?.invalidate()
+        topInfoLabelTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false, block: { (_) in
+            self.topInfoLabel.isHidden = true
+        })
     }
 }
 
@@ -462,7 +474,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
         if let indexPath = indexPaths.first {
             switch imageList[indexPath.item] {
                 
-            case .image(let (imageUrl, cacheUrl, _ /*attributes*/)):
+            case .image(let (imageUrl, cacheUrl, attr /*attributes*/)):
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         topPlayerView.isHidden = false
@@ -477,10 +489,13 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                                 topImageView.canDrawSubviewsIntoLayer = true
                                 topImageView.animates = true
                             }
+                            // TODO: Show textual info and start a timer to hide afterwards
+                            showTopInfo(attr)
                         }
                     }
                 } else {
                     topImageView.image = NSImage(contentsOf: imageUrl)
+                    showTopInfo(attr)
                 }
                 /*
                 if let shortTip = shortTips[indexPath] {
@@ -491,7 +506,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
             case .batchPlaceHolder:
                 break
             case .placeHolder(let p):
-                if let e = loader.loadCachedPlaceHolder(with: p.0, attributes: [:]) {
+                if let e = loader.loadCachedPlaceHolder(with: p.0, attributes: p.2) {
                     switch e {
                     case .image(let (_, cacheUrl, attributes)):
                         if let img = attributes["thumbnail"] as? NSImage {
@@ -502,7 +517,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                                 self.topImageView.canDrawSubviewsIntoLayer = true
                                 self.topImageView.animates = true
                             }
-                            
+                            self.showTopInfo(attributes)
                         }
                     default:
                         break
