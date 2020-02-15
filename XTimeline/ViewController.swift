@@ -261,6 +261,37 @@ class ViewController: NSViewController {
     }
 }
 
+extension ViewController {
+    @IBAction func copy(_ sender: Any?) {
+        if let index = bottomCollectionView.selectionIndexPaths.first {
+            let pb = NSPasteboard.general
+            pb.declareTypes([.string, .fileContents, .URL, .fileURL, .tiff], owner: self)
+            if let img = self.topImageView.image {
+                pb.writeObjects([img])
+            }
+            switch self.imageList[index.item] {
+            case .placeHolder(let (url, _, attr)):
+                pb.setString(url.absoluteString, forType: .string)
+                pb.setString(url.absoluteString, forType: .URL)
+                if let fileUrl = attr["thumbnailUrl"] as? URL {
+                    pb.setString(fileUrl.absoluteString, forType: .fileURL)
+                }
+            case .image(let (url, fileUrl, attr)):
+                pb.setString(url.absoluteString, forType: .string)
+                pb.setString(url.absoluteString, forType: .URL)
+                
+                if let fileUrl = fileUrl {
+                    pb.setString(fileUrl.path, forType: .fileURL)
+                }
+                
+            case .batchPlaceHolder(let (url, _)):
+                pb.clearContents()
+                NSPasteboard.general.setString(url.absoluteString, forType: .URL)
+            }
+        }
+    }
+}
+
 extension ViewController: NSCollectionViewDataSource {
     func numberOfSections(in collectionView: NSCollectionView) -> Int {
         return 1
@@ -291,6 +322,7 @@ extension ViewController: NSCollectionViewDataSource {
                         let idx = indexPath.item
                         DispatchQueue.main.async {
                             guard  previousGeneration == self.generation else {
+                                debugPrint("generation miss 3: previous \(previousGeneration), now is \(self.generation)")
                                 return
                             }
                             self.bottomCollectionView.performBatchUpdates({
@@ -305,6 +337,7 @@ extension ViewController: NSCollectionViewDataSource {
                         case .placeHolder, .image:
                             DispatchQueue.main.async {
                                 guard  previousGeneration == self.generation else {
+                                    debugPrint("generation miss 4: previous \(previousGeneration), now is \(self.generation)")
                                     return
                                 }
                                 self.imageList[indexPath.item] = entities.first!
@@ -338,17 +371,23 @@ extension ViewController: NSCollectionViewDataSource {
             case .image(let (url, cacheUrl, attr)):
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
+                        debugPrint("load video thumb at \(indexPath.item)")
                         let thumbUrl = cacheUrl.appendingPathExtension("vthumb")
                         if let thumbnail = NSImage(contentsOf: thumbUrl) {
                             imageView.image = thumbnail
                         }
+                        // TODO: add file url to attr for key "thumbnailUrl"
+
                         (item as? ThumbnailItem)?.isVideo = true
                         //if let tItem = item as? ThumbnailItem { tItem.isVideo = true }
                     } else {
+                        debugPrint("load image thumb at \(indexPath.item)")
                         if let thb: NSImage = attr["thumbnail"] as! NSImage? {
                             imageView.image = thb
                             var reducedAttr = attr
                             reducedAttr.removeValue(forKey: "thumbnail")
+                            // file url for image file in subreddit folder
+                            reducedAttr["thumbnailUrl"] = cacheUrl
                             // invalidate the cgimage from cache immediately after showing it
                             self.imageList[indexPath.item] = ImageEntity.placeHolder(url, false, reducedAttr)
                         } else {
@@ -374,12 +413,14 @@ extension ViewController: NSCollectionViewDataSource {
                 }
                 loader.load(entity: originalEntity) { (entities) in
                     guard previousGeneration == self.generation else {
+                        debugPrint("generation miss 1: previous \(previousGeneration), now is \(self.generation)")
                         return
                     }
                     DispatchQueue.main.async {
                         self.loadingItemCount -= 1
                     }
                     guard !entities.isEmpty else {
+                        // placeHolder failed to load
                         DispatchQueue.main.async {
                             self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
                         }
@@ -389,6 +430,7 @@ extension ViewController: NSCollectionViewDataSource {
                     case .image:
                         DispatchQueue.main.async {
                             guard previousGeneration == self.generation else {
+                                debugPrint("generation miss 2: previous \(previousGeneration), now is \(self.generation)")
                                 return
                             }
                             self.imageList[indexPath.item] = entities.first!
@@ -399,6 +441,9 @@ extension ViewController: NSCollectionViewDataSource {
                             self.bottomCollectionView.reloadItems(at: [indexPath])
                         }
                     default:
+                        // placeHolder or batchPlaceHolder failed to load
+                        debugPrint("fail placeholder at \(indexPath.item)")
+
                         DispatchQueue.main.async {
                             self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
                         }
