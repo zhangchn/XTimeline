@@ -50,7 +50,7 @@ extension OpenViewController: NSTextFieldDelegate {
             switch kindSelector.indexOfSelectedItem {
             case 0, 1:
                 
-                return OfflineRedditLoader.subRedditAutocompletion(for: partialString)
+                return RedditLoader.subRedditAutocompletion(for: partialString)
             default:
                 return words
             }

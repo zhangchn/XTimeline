@@ -626,9 +626,7 @@ class RedditLoader: AbstractImageLoader {
         }
         task.resume()
     }
-}
-
-final class OfflineRedditLoader: RedditLoader {
+    
     static var existingSubreddits = Set<String>()
     
     class func subRedditAutocompletion(for partial: String) -> [String] {
@@ -636,33 +634,28 @@ final class OfflineRedditLoader: RedditLoader {
             // Load again
             let fm = FileManager.default
             let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
-            let externalCreated = fm.fileExists(atPath: downloadPath + "/reddit/.external")
-            let internalCreated = fm.fileExists(atPath: downloadPath + "/reddit")
-            if externalCreated {
-                _ = ((try? fm.contentsOfDirectory(atPath: downloadPath + "/reddit/.external")) ?? []).filter({ (name) -> Bool in
+            _ = ["/reddit/.external", "/reddit"].filter {
+                fm.fileExists(atPath: downloadPath + $0)
+            } .map {
+                let base = downloadPath + $0
+                _ = try? fm.contentsOfDirectory(atPath: downloadPath + $0).filter({ (name) -> Bool in
                     var isDir = ObjCBool(false)
-                    fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name, isDirectory: &isDir)
-                    return isDir.boolValue
-                }).map({
-                    existingSubreddits.insert($0.lowercased())
-                })
-            }
-            if internalCreated {
-                _ = ((try? fm.contentsOfDirectory(atPath: downloadPath + "/reddit")) ?? []).filter({ (name) -> Bool in
-                    var isDir = ObjCBool(false)
-                    fm.fileExists(atPath: downloadPath + "/reddit/" + name, isDirectory: &isDir)
-                    return isDir.boolValue
-                }).map({
-                    existingSubreddits.insert($0.lowercased())
-                })
+                    fm.fileExists(atPath: base + "/" + name, isDirectory: &isDir)
+                    return isDir.boolValue && !name.hasPrefix(".")
+                }).map {
+                    _ = existingSubreddits.insert($0.lowercased())
+                }
             }
         }
         let lowerCasedPartial = partial.lowercased()
         let candidates = existingSubreddits.filter { (candidate) -> Bool in
             candidate.hasPrefix(lowerCasedPartial)
         }
-        return [String](candidates)
+        return [String](candidates).sorted()
     }
+}
+
+final class OfflineRedditLoader: RedditLoader {
     override func loadFirstPage(completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
         DispatchQueue.global().async {

@@ -91,6 +91,7 @@ class ViewController: NSViewController {
             do {
                 try fm.createDirectory(atPath: dest, withIntermediateDirectories: false, attributes: nil)
                 created = true
+                _ = RedditLoader.existingSubreddits.insert(name)
             } catch _ {
                 
             }
@@ -100,6 +101,7 @@ class ViewController: NSViewController {
             if !fm.fileExists(atPath: path) {
                 do {
                     try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+                    _ = RedditLoader.existingSubreddits.insert(name)
                 } catch let err {
                     let alert = NSAlert(error: err)
                     alert.beginSheetModal(for: self.view.window!) { (resp) in
