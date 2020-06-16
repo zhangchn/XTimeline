@@ -45,17 +45,18 @@ extension OpenViewController: NSTextFieldDelegate {
         let endIndex = fullString.index(beginIndex, offsetBy: charRange.length)
         let partialString = String(fullString[beginIndex..<endIndex])
         existingText = partialString
-        index[0] = -1
+        var result = [String]()
         if (control == self.userField) {
             switch kindSelector.indexOfSelectedItem {
             case 0, 1:
                 
-                return RedditLoader.subRedditAutocompletion(for: partialString)
+                result = RedditLoader.subRedditAutocompletion(for: partialString)
             default:
-                return words
+                result = words
             }
         }
-        return []
+        index[0] = -1
+        return result
     }
     
     func controlTextDidChange(_ obj: Notification) {
@@ -64,6 +65,12 @@ extension OpenViewController: NSTextFieldDelegate {
                 return
             }
             textView.complete(nil)
+        }
+    }
+    
+    func controlTextDidBeginEditing(_ obj: Notification) {
+        if let textView = obj.userInfo?["NSFieldEditor"] as? NSTextView {
+            existingText = textView.string
         }
     }
 }

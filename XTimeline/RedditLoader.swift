@@ -29,9 +29,9 @@ func generateThumbnail(for url: URL, cacheFileUrl: URL, attributes:[String: Any]
                 CGImageDestinationAddImage(dest, image, nil)
                 CGImageDestinationFinalize(dest)
             }
-            return completion([LoadableImageEntity.image(url, cacheFileUrl, attributes)])
+            return completion([LoadableImageEntity.image((url, cacheFileUrl, attributes))])
         case .failed:
-            return completion([LoadableImageEntity.image(url, cacheFileUrl, attributes)])
+            return completion([LoadableImageEntity.image((url, cacheFileUrl, attributes))])
         default:
             break
         }
@@ -95,9 +95,9 @@ fileprivate func entities(from children: [ChildData], url pageUrl: URL?, after: 
                  "author": d.author ?? "",
                  "text": d.selftext ?? "",
                  "domain": d.domain ?? ""]
-            return LoadableImageEntity.placeHolder(u,
-                                                   false,
-                                                   attr)
+            return LoadableImageEntity.placeHolder((u,
+                                                    false,
+                                                    attr))
             
     }
     
@@ -107,7 +107,7 @@ fileprivate func entities(from children: [ChildData], url pageUrl: URL?, after: 
         let host = pageUrl.host!
         
         let nextUrl = URL(string: "\(schema)://\(host)\(path)?count=25&after=\(after)")!
-        results.append(LoadableImageEntity.batchPlaceHolder(nextUrl, false))
+        results.append(LoadableImageEntity.batchPlaceHolder((nextUrl, false)))
     }
     return results
 }
@@ -510,7 +510,7 @@ class RedditLoader: AbstractImageLoader {
                                 }
                                 var extendedAttr = attributes
                                 extendedAttr["thumbnail"] = nsImg
-                                return completion([EntityKind.image(url, cacheFileUrl, extendedAttr)])
+                                return completion([EntityKind.image((url, cacheFileUrl, extendedAttr))])
 
                             }
                         }
@@ -534,7 +534,7 @@ class RedditLoader: AbstractImageLoader {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                             generateThumbnail(for: url, cacheFileUrl: cacheFileUrl, attributes: attributes, completion: completion)
                         } else {
-                            return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                            return completion([EntityKind.image((url, cacheFileUrl, attributes))])
                         }
                     default:
                         return completion([])
@@ -552,7 +552,7 @@ class RedditLoader: AbstractImageLoader {
             if let cacheFileUrl = cacheFileUrl {
                 if cacheFileUrl.pathExtension == "mp4" {
                     if fileManager.fileExists(atPath: cacheFileUrl.path) {
-                        return EntityKind.image(url, cacheFileUrl, attributes)
+                        return EntityKind.image((url, cacheFileUrl, attributes))
                     }
                 }
                 #if os(macOS)
@@ -577,7 +577,7 @@ class RedditLoader: AbstractImageLoader {
                         if let img = img {
                             var extendedAttr = attributes
                             extendedAttr["thumbnail"] = img
-                            return EntityKind.image(url, cacheFileUrl, extendedAttr)
+                            return EntityKind.image((url, cacheFileUrl, extendedAttr))
                         }
                     }
                 }
@@ -678,7 +678,7 @@ final class OfflineRedditLoader: RedditLoader {
                 }), url: nil, after: nil).first
             }
             if let l = list.last, let placeHolderUrl = URL(string: "after://\(self.name)/\(l.0)") {
-                result.append(RedditLoader.EntityKind.batchPlaceHolder(placeHolderUrl, false))
+                result.append(RedditLoader.EntityKind.batchPlaceHolder((placeHolderUrl, false)))
             }
             completion(result)
         }
@@ -713,7 +713,7 @@ final class OfflineRedditLoader: RedditLoader {
                 }), url: nil, after: nil).first
             }
             if let l = list.last, let placeHolderUrl = URL(string: "after://\(self.name)/\(l.0)") {
-                result.append(RedditLoader.EntityKind.batchPlaceHolder(placeHolderUrl, false))
+                result.append(RedditLoader.EntityKind.batchPlaceHolder((placeHolderUrl, false)))
             }
             completion(result)
         }

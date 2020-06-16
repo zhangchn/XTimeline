@@ -77,6 +77,9 @@ class ViewController: NSViewController {
         bottomCollectionView.allowsMultipleSelection = false
         bottomCollectionView.isSelectable = true
         
+        let doubleClick = NSClickGestureRecognizer(target: self, action: #selector(reshowTopInfo))
+        doubleClick.numberOfClicksRequired = 2
+        topImageView.addGestureRecognizer(doubleClick)
     }
 
     func setUpRedditLoader(name: String, offline: Bool = false) {
@@ -254,12 +257,17 @@ class ViewController: NSViewController {
     
     func showTopInfo(_ attr: [String: Any]) {
         topInfoLabel.stringValue = (attr["title"] as! String) + "\nBy: " + (attr["author"] as! String) + "\n" + (attr["text"] as! String)
+        reshowTopInfo()
+    }
+    @objc
+    func reshowTopInfo() {
         topInfoLabel.isHidden = false
         topInfoLabel.alphaValue = 0.85
         topInfoLabelTimer?.invalidate()
-        topInfoLabelTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false, block: { (_) in
+        topInfoLabelTimer = Timer.scheduledTimer(withTimeInterval: 6.0, repeats: false, block: { (_) in
             self.topInfoLabel.isHidden = true
         })
+
     }
 }
 
@@ -312,7 +320,7 @@ extension ViewController: NSCollectionViewDataSource {
             imageView.toolTip = nil
             switch imageList[indexPath.item] {
                 
-            case .batchPlaceHolder(let b):
+            case .batchPlaceHolder(let (batchUrl, _)):
                 
                 loader.load(entity: originalEntity) { (entities) in
                     guard previousGeneration == self.generation else { return }
@@ -329,8 +337,12 @@ extension ViewController: NSCollectionViewDataSource {
                             }
                             self.bottomCollectionView.performBatchUpdates({
                                 self.imageList.replaceSubrange(idx..<(idx + 1), with: entities)
+                                let oldSelection = self.bottomCollectionView.selectionIndexPaths
                                 self.bottomCollectionView.deleteItems(at: [indexPath])
                                 self.bottomCollectionView.insertItems(at: indexPaths)
+                                if oldSelection.count == 1 {
+                                    self.bottomCollectionView.selectItems(at: oldSelection, scrollPosition: NSCollectionView.ScrollPosition.bottom)
+                                }
                             }, completionHandler: nil)
                         }
                         
@@ -343,28 +355,32 @@ extension ViewController: NSCollectionViewDataSource {
                                     return
                                 }
                                 self.imageList[indexPath.item] = entities.first!
+                                let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
                                 self.bottomCollectionView!.reloadItems(at: [indexPath])
+                                if shouldReselect {
+                                    self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
+                                }
                             }
                             
-                        case .batchPlaceHolder(let b):
+                        case .batchPlaceHolder(let (batchUrl2, _)):
                             DispatchQueue.main.async {
-                                self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                                self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder((batchUrl2, false))
                             }
                             break
                         }
                     } else {
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                            self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder((batchUrl, false))
                         }
                     }
                 }
                 
                 imageView.image = nil
-                imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, true)
+                imageList[indexPath.item] = ImageEntity.batchPlaceHolder((batchUrl, true))
                 switch imageList[indexPath.item] {
                 case .batchPlaceHolder:
                     imageView.image = nil
-                    imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, true)
+                    imageList[indexPath.item] = ImageEntity.batchPlaceHolder((batchUrl, true))
                     imageView.toolTip = "Loading..."
                 default:
                     // If cache is hit, the entity could have been changed
@@ -391,7 +407,7 @@ extension ViewController: NSCollectionViewDataSource {
                             // file url for image file in subreddit folder
                             reducedAttr["thumbnailUrl"] = cacheUrl
                             // invalidate the cgimage from cache immediately after showing it
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder(url, false, reducedAttr)
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, reducedAttr))
                         } else {
                             // fallback
                             imageView.image = NSImage(contentsOf: cacheUrl)
@@ -424,7 +440,7 @@ extension ViewController: NSCollectionViewDataSource {
                     guard !entities.isEmpty else {
                         // placeHolder failed to load
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((p.0, false, p.2))
                         }
                         return
                     }
@@ -440,14 +456,19 @@ extension ViewController: NSCollectionViewDataSource {
                                 // Do not trigger re-rendering for invisible cell
                                 return
                             }
+                            let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
                             self.bottomCollectionView.reloadItems(at: [indexPath])
+                            if shouldReselect {
+                                self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
+                            }
+
                         }
                     default:
                         // placeHolder or batchPlaceHolder failed to load
                         debugPrint("fail placeholder at \(indexPath.item)")
 
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((p.0, false, p.2))
                         }
                     }
                 }
@@ -457,7 +478,7 @@ extension ViewController: NSCollectionViewDataSource {
                     // skip the following lines
                     imageView.image = nil
                     //self.loadingItemCount -= 1
-                    imageList[indexPath.item] = ImageEntity.placeHolder(p.0, true, p.2)
+                    imageList[indexPath.item] = ImageEntity.placeHolder((p.0, true, p.2))
                     
                 default:
                     break

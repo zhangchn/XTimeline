@@ -138,9 +138,9 @@ final class TwitterLoader: AbstractImageLoader {
                         //var results = TwitterLoader.imageUrls(from: innerHTML).map { EntityKind.placeHolder($0, false, [:]) }
                         var results = TwitterLoader.mediaUrls(from: innerHTML).map { (url) -> EntityKind in
                             if let host = url.host, host == "api.twitter.com" {
-                                return EntityKind.placeHolder(url, false, [TwitterLoader.VideoKey : true])
+                                return EntityKind.placeHolder((url, false, [TwitterLoader.VideoKey : true]))
                             } else {
-                                return EntityKind.placeHolder(url, false, [TwitterLoader.VideoKey : false])
+                                return EntityKind.placeHolder((url, false, [TwitterLoader.VideoKey : false]))
                             }
                         }
                         if timeline.hasMoreItems {
@@ -148,7 +148,7 @@ final class TwitterLoader: AbstractImageLoader {
                                 $0.starts(with: "max_position=") ? "max_position=\(timeline.minPosition)" : $0
                                 } .joined(separator: "&")
                             let nextUrl = URL(string: "\(url.scheme!)://\(url.host!)\(url.path)?\(query)")!
-                            results.append(EntityKind.batchPlaceHolder(nextUrl, false))
+                            results.append(EntityKind.batchPlaceHolder((nextUrl, false)))
                         }
                         
                         return completion(results)
@@ -220,7 +220,7 @@ final class TwitterLoader: AbstractImageLoader {
                                 // Recursively load mp4 for gif resources
                                 let gifCacheURL = self.cacheFunc(playbackUrl)
                                 if let path = gifCacheURL?.path, self.fileManager.fileExists(atPath: path) {
-                                    return completion([EntityKind.image(url, gifCacheURL, attributes)])
+                                    return completion([EntityKind.image((url, gifCacheURL, attributes))])
                                 }
                                 return self.loadPlaceHolder(with: playbackUrl, cacheFileUrl: gifCacheURL, attributes: attributes, completion: completion)
                             }
@@ -242,7 +242,7 @@ final class TwitterLoader: AbstractImageLoader {
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
                         }
-                        return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                        return completion([EntityKind.image((url, cacheFileUrl, attributes))])
                     case "mp4":
                         if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
                             try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
@@ -264,10 +264,10 @@ final class TwitterLoader: AbstractImageLoader {
             if fileManager.fileExists(atPath: cacheFileUrl.path) {
                 switch cacheFileUrl.pathExtension {
                 case "m3u8":
-                    return EntityKind.image(url, cacheFileUrl, attributes)
+                    return EntityKind.image((url, cacheFileUrl, attributes))
                 case "jpg", "jpeg", "png", "gif":
                     if let _ = NSImage(contentsOf: cacheFileUrl) {
-                        return EntityKind.image(url, cacheFileUrl, attributes)
+                        return EntityKind.image((url, cacheFileUrl, attributes))
                     }
                 case "mp4":
                     let path = cacheFileUrl.path
@@ -277,7 +277,7 @@ final class TwitterLoader: AbstractImageLoader {
                         // FIXME: Should reload after thumbnail generation
                         generateThumbnail(for: url, cacheFileUrl: cacheFileUrl, attributes: attributes) { _ in }
                     }
-                    return EntityKind.image(url, cacheFileUrl, attributes)
+                    return EntityKind.image((url, cacheFileUrl, attributes))
                     
                 default:
                     break
@@ -295,10 +295,10 @@ final class TwitterLoader: AbstractImageLoader {
             return []
         }
         //var results = TwitterLoader.imageUrls(from: html).map { EntityKind.placeHolder($0, false, [:]) }
-        var results = TwitterLoader.mediaUrls(from: html).map { EntityKind.placeHolder($0, false, [:]) }
+        var results = TwitterLoader.mediaUrls(from: html).map { EntityKind.placeHolder(($0, false, [:])) }
 
         let url = URL(string: "https://twitter.com/i/profiles/show/\(name)/media_timeline?include_available_features=1&include_entities=1&reset_error_state=false&max_position=\(minId)")!
-        results.append(EntityKind.batchPlaceHolder(url, false))
+        results.append(EntityKind.batchPlaceHolder((url, false)))
         return results
     }
  
