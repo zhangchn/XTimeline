@@ -344,14 +344,6 @@ class RedditLoader: AbstractImageLoader {
         self.cacheFunc = { (url: URL) -> URL?  in
             let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
             let fileName = url.lastPathComponent
-            if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
-                if external {
-                    let cachePath = downloadPath + "/reddit/.external/" + name + "/" + fileName
-                    return URL(fileURLWithPath: cachePath)
-                }
-                let cachePath = downloadPath + "/reddit/" + name + "/" + fileName
-                return URL(fileURLWithPath: cachePath)
-            }
             
             if url.host?.contains("v.redd.it") ?? false {
                 if external {
@@ -362,6 +354,17 @@ class RedditLoader: AbstractImageLoader {
                 let cachePath = downloadPath + "/reddit/" + name + url.pathComponents.joined(separator: "_") + ".mp4"
                 return URL(fileURLWithPath: cachePath)
             }
+            
+            if fileName.hasSuffix(".jpg") || fileName.hasSuffix(".png") || fileName.hasSuffix(".mp4") || fileName.hasSuffix(".gif") {
+                if external {
+                    let cachePath = downloadPath + "/reddit/.external/" + name + "/" + fileName
+                    return URL(fileURLWithPath: cachePath)
+                }
+                let cachePath = downloadPath + "/reddit/" + name + "/" + fileName
+                return URL(fileURLWithPath: cachePath)
+            }
+            
+            
             return nil
         }
     }
