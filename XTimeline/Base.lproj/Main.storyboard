@@ -799,11 +799,11 @@ Gw
                                 <rect key="frame" x="0.0" y="0.0" width="480" height="270"/>
                                 <subviews>
                                     <customView id="Xkg-b8-xpv">
-                                        <rect key="frame" x="0.0" y="0.0" width="480" height="153"/>
+                                        <rect key="frame" x="0.0" y="0.0" width="480" height="182"/>
                                         <autoresizingMask key="autoresizingMask"/>
                                         <subviews>
                                             <imageView horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="f3u-vm-2cE">
-                                                <rect key="frame" x="0.0" y="0.0" width="480" height="153"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="480" height="182"/>
                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                 <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" id="UfD-vq-Sd1"/>
                                                 <connections>
@@ -811,15 +811,15 @@ Gw
                                                 </connections>
                                             </imageView>
                                             <customView autoresizesSubviews="NO" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="yc1-U9-Ivh">
-                                                <rect key="frame" x="228" y="42" width="24" height="24"/>
+                                                <rect key="frame" x="228" y="71" width="24" height="24"/>
                                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             </customView>
                                             <avPlayerView hidden="YES" fixedFrame="YES" controlsStyle="inline" translatesAutoresizingMaskIntoConstraints="NO" id="qHZ-sX-0Yw">
-                                                <rect key="frame" x="0.0" y="0.0" width="480" height="153"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="480" height="182"/>
                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                             </avPlayerView>
                                             <textField hidden="YES" horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" translatesAutoresizingMaskIntoConstraints="NO" id="oft-jX-I2l">
-                                                <rect key="frame" x="20" y="114" width="88" height="19"/>
+                                                <rect key="frame" x="20" y="143" width="88" height="19"/>
                                                 <textFieldCell key="cell" title="Textual Info" drawsBackground="YES" id="Xkh-r0-hGB">
                                                     <font key="font" metaFont="system" size="16"/>
                                                     <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
@@ -834,17 +834,17 @@ Gw
                                         </constraints>
                                     </customView>
                                     <customView id="L2u-ro-Ty9">
-                                        <rect key="frame" x="0.0" y="163" width="480" height="107"/>
+                                        <rect key="frame" x="0.0" y="192" width="480" height="78"/>
                                         <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                                         <subviews>
                                             <scrollView wantsLayer="YES" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" hasVerticalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="99p-GE-9TI">
-                                                <rect key="frame" x="0.0" y="0.0" width="480" height="107"/>
+                                                <rect key="frame" x="0.0" y="-29" width="480" height="107"/>
                                                 <clipView key="contentView" id="Qy1-Ep-LfD">
-                                                    <rect key="frame" x="1" y="1" width="478" height="105"/>
+                                                    <rect key="frame" x="1" y="1" width="478" height="94"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <subviews>
                                                         <collectionView id="JIW-Ve-fUP">
-                                                            <rect key="frame" x="0.0" y="0.0" width="478" height="105"/>
+                                                            <rect key="frame" x="0.0" y="0.0" width="478" height="94"/>
                                                             <autoresizingMask key="autoresizingMask" heightSizable="YES"/>
                                                             <collectionViewFlowLayout key="collectionViewLayout" minimumInteritemSpacing="10" scrollDirection="horizontal" id="hMN-Qi-QwB">
                                                                 <size key="itemSize" width="50" height="44"/>
@@ -859,7 +859,7 @@ Gw
                                                     <edgeInsets key="contentInsets" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
                                                 </clipView>
                                                 <scroller key="horizontalScroller" wantsLayer="YES" verticalHuggingPriority="750" controlSize="mini" horizontal="YES" id="rRf-M8-smV">
-                                                    <rect key="frame" x="1" y="92" width="478" height="14"/>
+                                                    <rect key="frame" x="1" y="95" width="478" height="11"/>
                                                     <autoresizingMask key="autoresizingMask"/>
                                                 </scroller>
                                                 <scroller key="verticalScroller" hidden="YES" verticalHuggingPriority="750" horizontal="NO" id="5lU-4J-Qld">
@@ -878,7 +878,7 @@ Gw
                                 </subviews>
                                 <holdingPriorities>
                                     <real value="250"/>
-                                    <real value="250"/>
+                                    <real value="388"/>
                                 </holdingPriorities>
                                 <connections>
                                     <outlet property="delegate" destination="PaO-Cc-a9k" id="Eoh-pX-QzC"/>
