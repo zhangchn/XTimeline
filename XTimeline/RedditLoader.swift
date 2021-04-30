@@ -509,7 +509,11 @@ class RedditLoader: AbstractImageLoader {
                             if let img = NSBitmapImageRep(data: d)?.cgImage {
                                 let nsImg = NSImage(cgImage: img, size: NSSize(width: img.width, height: img.height))
                                 if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
-                                    try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                                    do {
+                                        try self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
+                                    } catch (let err) {
+                                        print(err)
+                                    }
                                 }
                                 var extendedAttr = attributes
                                 extendedAttr["thumbnail"] = nsImg

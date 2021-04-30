@@ -56,7 +56,7 @@ class ViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         let configuration = URLSessionConfiguration.default
-        configuration.httpMaximumConnectionsPerHost = 3
+        configuration.httpMaximumConnectionsPerHost = 2
         configuration.connectionProxyDictionary = [
             kCFNetworkProxiesSOCKSProxy : "127.0.0.1",
             kCFNetworkProxiesSOCKSPort: 1080,
