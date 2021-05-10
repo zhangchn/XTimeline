@@ -76,10 +76,14 @@ class ViewController: NSViewController {
         
         bottomCollectionView.allowsMultipleSelection = false
         bottomCollectionView.isSelectable = true
+        bottomCollectionView.delegate = self
         
         let doubleClick = NSClickGestureRecognizer(target: self, action: #selector(reshowTopInfo))
         doubleClick.numberOfClicksRequired = 2
         topImageView.addGestureRecognizer(doubleClick)
+        
+        // dragging
+        bottomCollectionView.setDraggingSourceOperationMask([.copy, .delete], forLocal: false)
     }
 
     func setUpRedditLoader(name: String, offline: Bool = false) {
@@ -275,7 +279,7 @@ extension ViewController {
     @IBAction func copy(_ sender: Any?) {
         if let index = bottomCollectionView.selectionIndexPaths.first {
             let pb = NSPasteboard.general
-            pb.declareTypes([.string, .fileContents, .URL, .fileURL, .tiff], owner: self)
+            pb.declareTypes([.string, .fileContents, .URL, .fileURL, .tiff, .png], owner: self)
             if let img = self.topImageView.image {
                 pb.writeObjects([img])
             }
@@ -416,17 +420,18 @@ extension ViewController: NSCollectionViewDataSource {
                 }
                 imageView.toolTip = self.toolTips[indexPath]
                 
-            case .placeHolder(let p):
-                let urlPath = p.0.host?.contains("v.redd.it") ?? false ? p.0.path : p.0.lastPathComponent
-                let author = p.2["author"] as? String ?? ""
-                let title = p.2["title"] as? String ?? ""
-                let selftext = p.2["text"] as? String ?? ""
-                let domain = p.2["domain"] as? String ?? ""
+//            case .placeHolder(let p):
+            case .placeHolder(let (url, isLoading, attr)):
+                let urlPath = url.host?.contains("v.redd.it") ?? false ? url.path : url.lastPathComponent
+                let author = attr["author"] as? String ?? ""
+                let title = attr["title"] as? String ?? ""
+                let selftext = attr["text"] as? String ?? ""
+                let domain = attr["domain"] as? String ?? ""
                 let toolTip = domain + ": " + urlPath + "\n" + author + "\n" + title +  (selftext.isEmpty ? "" : ("\n\"\"" + selftext + "\"\"\n"))
                 self.toolTips[indexPath] = toolTip
                 self.shortTips[indexPath] = domain + ": " + urlPath + " " + title
                 imageView.toolTip = toolTip
-                if !p.1 {
+                if !isLoading {
                     self.loadingItemCount += 1
                 }
                 loader.load(entity: originalEntity) { (entities) in
@@ -440,7 +445,7 @@ extension ViewController: NSCollectionViewDataSource {
                     guard !entities.isEmpty else {
                         // placeHolder failed to load
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder((p.0, false, p.2))
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, attr))
                         }
                         return
                     }
@@ -468,7 +473,7 @@ extension ViewController: NSCollectionViewDataSource {
                         debugPrint("fail placeholder at \(indexPath.item)")
 
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder((p.0, false, p.2))
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, attr))
                         }
                     }
                 }
@@ -478,7 +483,7 @@ extension ViewController: NSCollectionViewDataSource {
                     // skip the following lines
                     imageView.image = nil
                     //self.loadingItemCount -= 1
-                    imageList[indexPath.item] = ImageEntity.placeHolder((p.0, true, p.2))
+                    imageList[indexPath.item] = ImageEntity.placeHolder((url, true, attr))
                     
                 default:
                     break
@@ -573,8 +578,8 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 }*/
             case .batchPlaceHolder:
                 break
-            case .placeHolder(let p):
-                if let e = loader.loadCachedPlaceHolder(with: p.0, attributes: p.2) {
+            case .placeHolder(let (url, isLoading, attr)):
+                if let e = loader.loadCachedPlaceHolder(with: url, attributes: attr) {
                     switch e {
                     case .image(let (_, cacheUrl, attributes)):
                         if let img = attributes["thumbnail"] as? NSImage {
@@ -592,7 +597,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                     }
                 }
                 /*
-                loader.loadPlaceHolder(with: p.0, cacheFileUrl: loader.cacheFileUrl(for: p.0), attributes: [:]) { (es) in
+                loader.loadPlaceHolder(with: url, cacheFileUrl: loader.cacheFileUrl(for: url), attributes: [:]) { (es) in
                     if let e = es.first {
                         switch e {
                         case .image(let (_, cacheUrl, attributes)):
@@ -623,3 +628,91 @@ extension ViewController: NSSplitViewDelegate {
         
     }
 }
+
+extension ViewController: NSCollectionViewDelegate {
+    func collectionView(_ collectionView: NSCollectionView, canDragItemsAt indexPaths: Set<IndexPath>, with event: NSEvent) -> Bool {
+        for indexPath in indexPaths {
+            switch imageList[indexPath.item] {
+            case .batchPlaceHolder(_):
+                return false
+            default:
+                break
+            }
+        }
+        return true
+    }
+    
+    func promiseProvider(for cacheUrl: URL) -> ThumbItemFilePromiseProvider? {
+        let pathExt = cacheUrl.pathExtension
+        guard let typeIdentifier = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, pathExt as CFString, nil) else {
+            return nil
+        }
+        let provider = ThumbItemFilePromiseProvider(fileType: typeIdentifier.takeRetainedValue() as String, delegate: self)
+        provider.userInfo = [ThumbItemFilePromiseProvider.UserInfoKeys.urlKey: cacheUrl]
+        return provider
+    }
+    
+    func collectionView(_ collectionView: NSCollectionView, pasteboardWriterForItemAt index: Int) -> NSPasteboardWriting? {
+        switch imageList[index] {
+        case .batchPlaceHolder(_):
+            return nil
+        case .image(let (_, cacheUrl, _)):
+            guard let cacheUrl = cacheUrl else {return nil}
+            return promiseProvider(for: cacheUrl)
+        
+        case .placeHolder(let (url, isLoading, attr)):
+            guard !isLoading else {
+                debugPrint("still loading")
+                return nil
+                
+            }
+            guard let cacheUrl = loader.cacheFileUrl(for: url) else {return nil}
+            return promiseProvider(for: cacheUrl)
+        }
+    }
+//    func collectionView(_ collectionView: NSCollectionView, draggingSession session: NSDraggingSession, endedAt screenPoint: NSPoint, dragOperation operation: NSDragOperation) {
+//        if operation == .delete, let items = session.draggingPasteboard.pasteboardItems {
+//            for pasteboardItem in items {
+//                if let photoIdx = pasteboardItem.propertyList(forType: ) as? Int {
+//                    let indexPath = IndexPath(item: photoIdx, section: 0)
+//
+//                }
+//            }
+//        }
+//    }
+}
+
+extension ViewController: NSFilePromiseProviderDelegate {
+    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, fileNameForType fileType: String) -> String {
+        return ((filePromiseProvider.userInfo as! [String: URL])[ThumbItemFilePromiseProvider.UserInfoKeys.urlKey]!).lastPathComponent
+    }
+    
+    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, writePromiseTo url: URL, completionHandler: @escaping (Error?) -> Void) {
+        let fm = FileManager()
+        let source = ((filePromiseProvider.userInfo as! [String: URL])[ThumbItemFilePromiseProvider.UserInfoKeys.urlKey]!)
+        do {
+            try fm.copyItem(at: source, to: url)
+            completionHandler(nil)
+        } catch let error {
+            completionHandler(error)
+        }
+        
+    }
+    
+    
+}
+
+//extension ViewController: NSDraggingSource {
+//    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+//        switch context {
+//        case .outsideApplication:
+//            return NSDragOperation.copy
+//        case .withinApplication:
+//            return NSDragOperation.copy
+//
+//        @unknown default:
+//            fatalError()
+//        }
+//    }
+//}
+

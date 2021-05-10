@@ -35,3 +35,28 @@ class ThumbnailItem : NSCollectionViewItem {
         }
     }
 }
+
+
+class ThumbItemFilePromiseProvider: NSFilePromiseProvider {
+    struct UserInfoKeys {
+        static let item = "item"
+        static let urlKey = "url"
+    }
+    override func writableTypes(for pasteboard: NSPasteboard) -> [NSPasteboard.PasteboardType] {
+        var types = super.writableTypes(for: pasteboard)
+        types.append(.fileURL)
+        return types
+    }
+    override func pasteboardPropertyList(forType type: NSPasteboard.PasteboardType) -> Any? {
+        guard let userInfoDict = userInfo as? [String: Any] else { return nil }
+        switch type {
+        case .fileURL:
+            if let url = userInfoDict["file-url"] as? NSURL {
+                return url.pasteboardPropertyList(forType: type)
+            }
+        default:
+            break
+        }
+        return super.pasteboardPropertyList(forType: type)
+    }
+}
