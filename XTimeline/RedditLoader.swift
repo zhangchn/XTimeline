@@ -38,47 +38,56 @@ func generateThumbnail(for url: URL, cacheFileUrl: URL, attributes:[String: Any]
     })
 
 }
-fileprivate func previewSize(for child: RedditLoader.SubredditPage.Child.ChildData) -> CGSize? {
+typealias ChildData = RedditLoader.SubredditPage.Child.ChildData
+fileprivate func previewSize(for child: ChildData) -> CGSize? {
     if let source = child.preview?.images?.first?.source {
         return CGSize(width: source.width, height: source.height)
     }
     return nil
 }
-typealias ChildData = RedditLoader.SubredditPage.Child.ChildData
+
 fileprivate func entities(from json: Data, url: URL) -> [LoadableImageEntity] {
     let (c, after) = children(from: json)
     return entities(from: c, url: url, after: after)
 }
 
 fileprivate func entities(from children: [ChildData], url pageUrl: URL?, after: String?) -> [LoadableImageEntity] {
-    var results = children.compactMap({ (child) -> (String, ChildData)? in
+    var results = children.flatMap({ (child) -> [(String, ChildData)] in
         let d = child
         if d.isSelf ?? false {
-            return nil
+            return []
         }
         if d.isRedditMediaDomain ?? false, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
             if domain.hasSuffix("v.redd.it"), let videoPreview = d.media?.redditVideo {
                 if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
-                    return (url, d)
+                    return [(url, d)]
                 }
             }
-            return (url, d)
+            return [(url, d)]
         }
         if let media = d.media, let tn = media.oembed?.thumbnailUrl {
             if tn.hasPrefix("https://i.imgur.com/"), tn.hasSuffix(".jpg?fbplay") {
                 let url = tn.replacingOccurrences(of: ".jpg?fbplay", with: ".mp4")
-                return (url, d)
+                return [(url, d)]
             }
+        }
+        if let mediaMetadata = d.mediaMetadata {
+            return mediaMetadata.map { ($1.s.u, d) }
         }
         if let videoPreview = d.preview?.redditVideoPreview {
             if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
-                return (url, d)
+                return [(url, d)]
             }
         }
         if let resolutions = d.preview?.images?.first?.resolutions {
-            return resolutions.max(by: { $0.width * $0.height < $1.width * $1.height })?.url.map { ($0, d) }
+            if let result = resolutions.max(by: { $0.width * $0.height < $1.width * $1.height })?.url.map({($0, d)}) {
+                return [result]
+            }
         }
-        return child.preview?.images?.first?.source?.url.map {($0, d)}
+        if let result = child.preview?.images?.first?.source?.url.map({($0, d)}) {
+            return [result]
+        }
+        return []
     }).map {
         ($0.0.replacingOccurrences(of: "&amp;", with: "&"), $0.1)
         } .compactMap{ (u, d) -> (URL, ChildData)? in
@@ -384,6 +393,16 @@ class RedditLoader: AbstractImageLoader {
             let oembed: Embed?
             let redditVideo: VideoPreview?
         }
+        struct MediaMetaDataItem: Codable {
+            struct SourceItem: Codable {
+                let x: Int
+                let y: Int
+                let u: String
+            }
+            let status: String
+            let m: String // MIME
+            let s: SourceItem
+        }
         struct VideoPreview: Codable {
             let fallbackUrl: String?
             let scrubberMediaUrl: String?
@@ -418,6 +437,7 @@ class RedditLoader: AbstractImageLoader {
                 let isRedditMediaDomain: Bool?
                 let isSelf: Bool?
                 let media: Media?
+                let mediaMetadata: [String: MediaMetaDataItem]?
                 let id: String?
                 let createdUtc: Int?
             }
