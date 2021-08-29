@@ -370,7 +370,7 @@ class RedditLoader: AbstractImageLoader {
             let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
             let fileName = url.lastPathComponent
             
-            if url.host?.contains("v.redd.it") ?? false {
+            if url.host?.contains("v.redd.it") ?? false || (url.host?.contains("preview.redd.it") ?? false && url.query?.contains("format=mp4") ?? false) {
                 if external {
                     let cachePath = downloadPath + "/reddit/.external/" + name + "/" + url.pathComponents.joined(separator: "_") + ".mp4"
                     return URL(fileURLWithPath: cachePath)
