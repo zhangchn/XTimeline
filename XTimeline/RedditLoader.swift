@@ -73,19 +73,27 @@ fileprivate func entities(from children: [ChildData], url pageUrl: URL?, after: 
         }
         if let mediaMetadata = d.mediaMetadata {
             return mediaMetadata.compactMap { (key, metadataItem) -> (String, ChildData)? in
-                switch metadataItem.m.lowercased() {
-                case "image/mp4", "image/gif":
-                    if let u1 = metadataItem.s.mp4 {
-                        return (u1, d)
-                    } else if let u2 = metadataItem.s.gif {
-                        return (u2, d)
+                guard metadataItem.s != nil else {
+                    print("metadata s is nil: \(mediaMetadata)")
+                    return nil
+                }
+                if let mimeStr = metadataItem.m {
+                    switch mimeStr.lowercased() {
+                    case "image/mp4", "image/gif":
+                        if let u1 = metadataItem.s?.mp4 {
+                            return (u1, d)
+                        } else if let u2 = metadataItem.s?.gif {
+                            return (u2, d)
+                        }
+                    case "image/jpeg", "image/jpg", "image/png":
+                        if let u3 = metadataItem.s?.u {
+                            return (u3, d)
+                        }
+                    default:
+                        print("metadata mime!!!: \(mimeStr)")
                     }
-                case "image/jpeg", "image/jpg", "image/png":
-                    if let u3 = metadataItem.s.u {
-                        return (u3, d)
-                    }
-                default:
-                    print("metadata mime!!!: \(metadataItem.m)")
+                } else {
+                    print("metadata mime! is nil: \(metadataItem)")
                 }
                 return nil
             }
@@ -418,8 +426,8 @@ class RedditLoader: AbstractImageLoader {
                 let gif: String?
             }
             let status: String
-            let m: String // MIME
-            let s: SourceItem
+            let m: String? // MIME
+            let s: SourceItem?
         }
         struct VideoPreview: Codable {
             let fallbackUrl: String?
