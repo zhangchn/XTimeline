@@ -16,7 +16,13 @@ class ThumbnailItem : NSCollectionViewItem {
     override init(nibName nibNameOrNil: NSNib.Name?, bundle nibBundleOrNil: Bundle?) {
         isVideo = false
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
-        
+    }
+    override func prepareForReuse() {
+        let f = self.playableIcon.frame
+        let r = min(f.size.width, f.size.height)
+        self.playableIcon.layer?.cornerRadius = r / 2
+        let c = NSColor(deviceWhite: 1.0, alpha: 0.7).cgColor
+        self.playableIcon.layer?.backgroundColor = c
     }
     @IBOutlet weak var playableIcon: NSTextField!
     override var isSelected: Bool {
@@ -32,6 +38,7 @@ class ThumbnailItem : NSCollectionViewItem {
     var isVideo: Bool {
         didSet {
             self.playableIcon.isHidden = !isVideo
+            
         }
     }
 }

@@ -97,6 +97,7 @@ class ViewController: NSViewController {
             let dest = downloadPath + "/reddit/.external/" + name
             do {
                 try fm.createDirectory(atPath: dest, withIntermediateDirectories: false, attributes: nil)
+                try fm.createDirectory(atPath: dest + "/.json", withIntermediateDirectories: false, attributes: nil)
                 created = true
                 _ = RedditLoader.existingSubreddits.insert(name)
             } catch _ {
@@ -109,6 +110,7 @@ class ViewController: NSViewController {
                 do {
                     try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
                     _ = RedditLoader.existingSubreddits.insert(name)
+                    try fm.createDirectory(atPath: path + "/.json", withIntermediateDirectories: false, attributes: nil)
                 } catch let err {
                     let alert = NSAlert(error: err)
                     alert.beginSheetModal(for: self.view.window!) { (resp) in

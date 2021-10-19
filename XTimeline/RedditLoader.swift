@@ -73,19 +73,23 @@ fileprivate func entities(from children: [ChildData], url pageUrl: URL?, after: 
         }
         if let mediaMetadata = d.mediaMetadata {
             return mediaMetadata.compactMap { (key, metadataItem) -> (String, ChildData)? in
-                switch metadataItem.m.lowercased() {
-                case "image/mp4", "image/gif":
-                    if let u1 = metadataItem.s.mp4 {
-                        return (u1, d)
-                    } else if let u2 = metadataItem.s.gif {
-                        return (u2, d)
+                if let m = metadataItem.m, let s = metadataItem.s {
+                    switch m.lowercased() {
+                    case "image/mp4", "image/gif":
+                        if let u1 = s.mp4 {
+                            return (u1, d)
+                        } else if let u2 = s.gif {
+                            return (u2, d)
+                        }
+                    case "image/jpeg", "image/jpg", "image/png":
+                        if let u3 = s.u {
+                            return (u3, d)
+                        }
+                    default:
+                        print("metadata mime!!!: \(m)")
                     }
-                case "image/jpeg", "image/jpg", "image/png":
-                    if let u3 = metadataItem.s.u {
-                        return (u3, d)
-                    }
-                default:
-                    print("metadata mime!!!: \(metadataItem.m)")
+                } else {
+                    print("no metadata mime or source: \(metadataItem)")
                 }
                 return nil
             }
@@ -349,8 +353,11 @@ class RedditLoader: AbstractImageLoader {
     var cacheFunc: ((URL) -> URL?)
 
     let sqlite : DBWrapper
+    let useExternalStorage: Bool
+    var cachePath: String
     init(name: String, session: URLSession, external: Bool = false) {
         self.name = name
+        self.useExternalStorage = external
         self.session = session
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .returnCacheDataElseLoad
@@ -360,11 +367,13 @@ class RedditLoader: AbstractImageLoader {
                 RedditLoader.sharedExternalDB = try! DBWrapper(external: true)
             }
             self.sqlite = RedditLoader.sharedExternalDB
+            self.cachePath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/.external/\(name)/"
         } else {
             if RedditLoader.sharedInternalDB == nil {
                 RedditLoader.sharedInternalDB = try! DBWrapper(external: false)
             }
             self.sqlite = RedditLoader.sharedInternalDB
+            self.cachePath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/"
         }
         self.cacheFunc = { (url: URL) -> URL?  in
             let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
@@ -418,8 +427,8 @@ class RedditLoader: AbstractImageLoader {
                 let gif: String?
             }
             let status: String
-            let m: String // MIME
-            let s: SourceItem
+            let m: String? // MIME
+            let s: SourceItem?
         }
         struct VideoPreview: Codable {
             let fallbackUrl: String?
@@ -470,7 +479,7 @@ class RedditLoader: AbstractImageLoader {
         let url: String?
     }
     override func loadNextBatch(with url: URL, completion: @escaping ([EntityKind]) -> ()) {
-        let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
+        let downPath = self.cachePath + ".json"
         let saveCache = fileManager.fileExists(atPath: downPath)
 
         let task = session.dataTask(with: url) { [weak self] data, response, err in
@@ -642,7 +651,7 @@ class RedditLoader: AbstractImageLoader {
     
     override func loadFirstPage(completion: @escaping ([EntityKind]) -> ()) {
         let firstPageUrl = URL(string: "https://www.reddit.com/r/\(name)/.json")!
-        let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
+        let downPath = self.cachePath + "/.json"
         let saveCache = fileManager.fileExists(atPath: downPath)
         let task = session.dataTask(with: firstPageUrl) {
             [weak self] (data, response, error) in
@@ -702,7 +711,7 @@ class RedditLoader: AbstractImageLoader {
 
 final class OfflineRedditLoader: RedditLoader {
     override func loadFirstPage(completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
-        let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
+        let downPath = self.cachePath + "/.json"
         DispatchQueue.global().async {
             var jsons = [String: [ChildData]]()
             let list = self.sqlite.queryBatch(sub: self.name, count: 10)
@@ -737,7 +746,7 @@ final class OfflineRedditLoader: RedditLoader {
         let idx = p.index(after: p.startIndex)
         let after = p.suffix(from: idx)
         
-        let downPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first! + "/reddit/\(name)/.json"
+        let downPath = self.cachePath + ".json"
         DispatchQueue.global().async {
             var jsons = [String: [ChildData]]()
             let list = self.sqlite.queryBatch(sub: self.name, after: String(after), count: 10)
