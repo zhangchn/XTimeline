@@ -38,7 +38,7 @@ class ViewController: NSViewController {
     var imageList : [ImageEntity] = []
     var loadingItemCount = 0 {
         didSet {
-            self.view.window?.title = (loadingItemCount == 0 ? "" : "(\(loadingItemCount))") + name
+            self.view.window?.title = "[" + (loadingItemCount == 0 ? "" : "\(loadingItemCount)/") + "\(imageList.count)" + "] " + name
         }
     }
     //var cacheFunc: ((URL) -> URL?)!
@@ -56,7 +56,7 @@ class ViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         let configuration = URLSessionConfiguration.default
-        configuration.httpMaximumConnectionsPerHost = 2
+        configuration.httpMaximumConnectionsPerHost = 4
         configuration.connectionProxyDictionary = [
             kCFNetworkProxiesSOCKSProxy : "127.0.0.1",
             kCFNetworkProxiesSOCKSPort: 1080,
@@ -216,6 +216,7 @@ class ViewController: NSViewController {
             let identifier = NSStoryboardSegue.Identifier("open-sheet")
             performSegue(withIdentifier: identifier, sender: nil)
         }
+        self.view.window?.delegate = self
     }
     
     
@@ -317,7 +318,7 @@ extension ViewController: NSCollectionViewDataSource {
     }
     
     func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
-        print("item for indexPath \(indexPath.item)")
+        // print("item for indexPath \(indexPath.item)")
         let item = collectionView.makeItem(withIdentifier: itemId, for: indexPath)
         (item as? ThumbnailItem)?.isVideo = false
         let originalEntity = imageList[indexPath.item]
@@ -395,7 +396,7 @@ extension ViewController: NSCollectionViewDataSource {
             case .image(let (url, cacheUrl, attr)):
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
-                        debugPrint("load video thumb at \(indexPath.item)")
+                        // debugPrint("load video thumb at \(indexPath.item)")
                         let thumbUrl = cacheUrl.appendingPathExtension("vthumb")
                         if let thumbnail = NSImage(contentsOf: thumbUrl) {
                             imageView.image = thumbnail
@@ -405,7 +406,7 @@ extension ViewController: NSCollectionViewDataSource {
                         (item as? ThumbnailItem)?.isVideo = true
                         //if let tItem = item as? ThumbnailItem { tItem.isVideo = true }
                     } else {
-                        debugPrint("load image thumb at \(indexPath.item)")
+                        // debugPrint("load image thumb at \(indexPath.item)")
                         if let thb: NSImage = attr["thumbnail"] as! NSImage? {
                             imageView.image = thb
                             var reducedAttr = attr
@@ -434,7 +435,10 @@ extension ViewController: NSCollectionViewDataSource {
                 self.shortTips[indexPath] = domain + ": " + urlPath + " " + title
                 imageView.toolTip = toolTip
                 if !isLoading {
-                    self.loadingItemCount += 1
+                    DispatchQueue.main.async {
+                        self.loadingItemCount += 1
+                        
+                    }
                 }
                 loader.load(entity: originalEntity) { (entities) in
                     guard previousGeneration == self.generation else {
@@ -718,3 +722,13 @@ extension ViewController: NSFilePromiseProviderDelegate {
 //    }
 //}
 
+
+extension ViewController: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        if let redditLoader = self.loader as? RedditLoader {
+            redditLoader.session.invalidateAndCancel()
+            redditLoader.redditSession.invalidateAndCancel()
+        }
+        self.loader = nil
+    }
+}

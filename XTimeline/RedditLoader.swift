@@ -345,7 +345,7 @@ class RedditLoader: AbstractImageLoader {
     static var sharedInternalDB: DBWrapper!
     
     typealias EntityKind = LoadableImageEntity
-
+    typealias VideoDownloadTask = (URL, URLSessionTask)
     let name: String
     let session: URLSession
     let redditSession: URLSession
@@ -355,12 +355,16 @@ class RedditLoader: AbstractImageLoader {
     let sqlite : DBWrapper
     let useExternalStorage: Bool
     var cachePath: String
+    var videoTasks = [VideoDownloadTask]()
+    var ongoingVideoTasks = [VideoDownloadTask]()
     init(name: String, session: URLSession, external: Bool = false) {
         self.name = name
         self.useExternalStorage = external
         self.session = session
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .returnCacheDataElseLoad
+        print("default http max conn per host: \(configuration.httpMaximumConnectionsPerHost) -> 5")
+        configuration.httpMaximumConnectionsPerHost = 5
         self.redditSession = URLSession(configuration: configuration)
         if external {
             if RedditLoader.sharedExternalDB == nil {
@@ -512,14 +516,32 @@ class RedditLoader: AbstractImageLoader {
     
     override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes: [String: Any], completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
-        let useRedditSession = false // url.host!.hasSuffix(".redd.it") ||
+//        let useRedditSession = false // url.host!.hasSuffix(".redd.it") ||
 //            url.host!.hasSuffix(".redditmedia.com")
+        let useRedditSession = url.host!.hasSuffix(".redd.it") 
         let s = useRedditSession ? redditSession : session
         //let fileName = url.lastPathComponent
+        let isVideoTask = url.pathExtension == "mp4"
         let task = s.downloadTask(with: url) { [weak self] (fileUrl, response, err)  in
             guard let self = self else {return}
             if let err = err {
                 print("error loading \(url.absoluteString): \(err.localizedDescription)")
+            }
+            for (tIdx, t) in self.ongoingVideoTasks.enumerated() {
+                if t.0 == url {
+                    self.ongoingVideoTasks.remove(at: tIdx)
+                    break
+                }
+            }
+                        
+            defer {
+                DispatchQueue.main.async {
+                    while self.ongoingVideoTasks.count < 3 && !self.videoTasks.isEmpty {
+                        let nextTask = self.videoTasks.removeFirst()
+                        self.ongoingVideoTasks.append(nextTask)
+                        nextTask.1.resume()
+                    }
+                }
             }
             if let fileUrl = fileUrl, let cacheFileUrl = cacheFileUrl {
                 let contentType = (response as! HTTPURLResponse).allHeaderFields["Content-Type"] as? String
@@ -597,7 +619,19 @@ class RedditLoader: AbstractImageLoader {
             }
             return completion([])
         }
-        task.resume()
+        if isVideoTask {
+            DispatchQueue.main.async {
+                self.videoTasks.append((url, task))
+                while self.ongoingVideoTasks.count < 3 && !self.videoTasks.isEmpty {
+                    let nextTask = self.videoTasks.removeFirst()
+                    self.ongoingVideoTasks.append(nextTask)
+                    nextTask.1.resume()
+                }
+            }
+            
+        } else {
+            task.resume()
+        }
     }
     
     override func loadCachedPlaceHolder(with url: URL, attributes: [String: Any]) -> EntityKind? {
