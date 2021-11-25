@@ -52,15 +52,20 @@ class ViewController: NSViewController {
     
     typealias LoaderType = AbstractImageLoader
     var loader: LoaderType!
+    var itemReloadObserver: AnyObject?
     typealias ImageEntity = LoadableImageEntity
     override func viewDidLoad() {
         super.viewDidLoad()
         let configuration = URLSessionConfiguration.default
         configuration.httpMaximumConnectionsPerHost = 4
         configuration.connectionProxyDictionary = [
-            kCFNetworkProxiesSOCKSProxy : "127.0.0.1",
-            kCFNetworkProxiesSOCKSPort: 1080,
-            kCFNetworkProxiesSOCKSEnable: true,
+            kCFStreamPropertyHTTPSProxyHost: "127.0.0.1",
+            kCFStreamPropertyHTTPSProxyPort: 8118,
+            kCFStreamPropertyHTTPProxyHost: "127.0.0.1",
+            kCFStreamPropertyHTTPProxyPort: 8118,
+//            kCFNetworkProxiesSOCKSProxy : "127.0.0.1",
+//            kCFNetworkProxiesSOCKSPort: 1080,
+//            kCFNetworkProxiesSOCKSEnable: true,
         ]
         configuration.httpAdditionalHeaders = [
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:64.0) Gecko/20100101 Firefox/64.0"
@@ -84,6 +89,25 @@ class ViewController: NSViewController {
         
         // dragging
         bottomCollectionView.setDraggingSourceOperationMask([.copy, .delete], forLocal: false)
+        
+        // double click
+        itemReloadObserver = NotificationCenter.default.addObserver(forName: ThumbnailItem.reloadItem, object: nil, queue: .main) { note in
+            if let thumbItem = note.object as? ThumbnailItem {
+                if let indexPath = self.bottomCollectionView.indexPath(for: thumbItem) {
+                    let item = self.imageList[indexPath.item]
+                        
+                    switch item {
+                    case .placeHolder(let t1):
+                        self.imageList[indexPath.item] = .placeHolder((t1.0, false, t1.2))
+                    case .batchPlaceHolder(let t2):
+                        self.imageList[indexPath.item] = .batchPlaceHolder((t2.0, false))
+                    default:
+                        break
+                    }
+                    self.bottomCollectionView.reloadItems(at: [indexPath])
+                }
+            }
+        }
     }
 
     func setUpRedditLoader(name: String, offline: Bool = false) {
@@ -190,6 +214,79 @@ class ViewController: NSViewController {
             self.imageList = entities
             DispatchQueue.main.async {
                 self.bottomCollectionView!.reloadData()
+            }
+        }
+    }
+    
+    @IBAction func fetchPlaceholders(_ sender: Any) {
+        let previousGeneration = self.generation
+        for (itemIdx, item) in self.imageList.enumerated() {
+            let indexPath = IndexPath(item: itemIdx, section: 0)
+            switch item {
+            case .placeHolder(let (url, isLoading, attr)):
+                guard !isLoading else {continue}
+                self.imageList[itemIdx] = ImageEntity.placeHolder((url, true, attr))
+                
+                let urlPath = url.host?.contains("v.redd.it") ?? false ? url.path : url.lastPathComponent
+                let author = attr["author"] as? String ?? ""
+                let title = attr["title"] as? String ?? ""
+                let selftext = attr["text"] as? String ?? ""
+                let domain = attr["domain"] as? String ?? ""
+                let toolTip = domain + ": " + urlPath + "\n" + author + "\n" + title +  (selftext.isEmpty ? "" : ("\n\"\"" + selftext + "\"\"\n"))
+
+                
+                DispatchQueue.main.async {
+                    self.toolTips[indexPath] = toolTip
+                    self.shortTips[indexPath] = domain + ": " + urlPath + " " + title
+                    self.loadingItemCount += 1
+                }
+                DispatchQueue.global().async {
+                    self.loader?.load(entity: item) { (entities) in
+                        guard previousGeneration == self.generation else {
+                            debugPrint("generation miss 1: previous \(previousGeneration), now is \(self.generation)")
+                            return
+                        }
+                        DispatchQueue.main.async {
+                            self.loadingItemCount -= 1
+                        }
+                        guard !entities.isEmpty else {
+                            // placeHolder failed to load
+                            DispatchQueue.main.async {
+                                self.imageList[itemIdx] = ImageEntity.placeHolder((url, false, attr))
+                            }
+                            return
+                        }
+                        switch entities.first! {
+                        case .image:
+                            DispatchQueue.main.async {
+                                guard previousGeneration == self.generation else {
+                                    debugPrint("generation miss 2: previous \(previousGeneration), now is \(self.generation)")
+                                    return
+                                }
+                                self.imageList[itemIdx] = entities.first!
+                                guard self.bottomCollectionView.indexPathsForVisibleItems().contains(indexPath) else {
+                                    // Do not trigger re-rendering for invisible cell
+                                    return
+                                }
+                                let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
+                                self.bottomCollectionView.reloadItems(at: [indexPath])
+                                if shouldReselect {
+                                    self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
+                                }
+
+                            }
+                        default:
+                            // placeHolder or batchPlaceHolder failed to load
+                            debugPrint("fail placeholder at \(indexPath.item)")
+
+                            DispatchQueue.main.async {
+                                self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, attr))
+                            }
+                        }
+                    }
+                }
+            default:
+                break
             }
         }
     }
@@ -331,6 +428,7 @@ extension ViewController: NSCollectionViewDataSource {
                 
                 loader.load(entity: originalEntity) { (entities) in
                     guard previousGeneration == self.generation else { return }
+                    guard indexPath.item == self.imageList.count - 1 else { return }
                     if entities.count > 1 {
                         var indexPaths = Set<IndexPath>()
                         for x in 0..<entities.count {
@@ -440,7 +538,7 @@ extension ViewController: NSCollectionViewDataSource {
                         
                     }
                 }
-                loader.load(entity: originalEntity) { (entities) in
+                self.loader?.load(entity: originalEntity) { (entities) in
                     guard previousGeneration == self.generation else {
                         debugPrint("generation miss 1: previous \(previousGeneration), now is \(self.generation)")
                         return
@@ -585,7 +683,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
             case .batchPlaceHolder:
                 break
             case .placeHolder(let (url, isLoading, attr)):
-                if let e = loader.loadCachedPlaceHolder(with: url, attributes: attr) {
+                if let e = self.loader?.loadCachedPlaceHolder(with: url, attributes: attr) {
                     switch e {
                     case .image(let (_, cacheUrl, attributes)):
                         if let img = attributes["thumbnail"] as? NSImage {
@@ -672,7 +770,7 @@ extension ViewController: NSCollectionViewDelegate {
                 return nil
                 
             }
-            guard let cacheUrl = loader.cacheFileUrl(for: url) else {return nil}
+            guard let cacheUrl = self.loader?.cacheFileUrl(for: url) else {return nil}
             return promiseProvider(for: cacheUrl)
         }
     }
@@ -730,5 +828,8 @@ extension ViewController: NSWindowDelegate {
             redditLoader.redditSession.invalidateAndCancel()
         }
         self.loader = nil
+        if let ob = itemReloadObserver {
+            NotificationCenter.default.removeObserver(ob)
+        }
     }
 }

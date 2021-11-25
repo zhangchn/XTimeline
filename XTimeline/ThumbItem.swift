@@ -41,6 +41,15 @@ class ThumbnailItem : NSCollectionViewItem {
             
         }
     }
+    static let reloadItem = Notification.Name("thumbItem.reloadItem")
+    override func mouseUp(with event: NSEvent) {
+        if event.clickCount == 2 {
+            print("dbClick")
+            NotificationCenter.default.post(name: ThumbnailItem.reloadItem, object: self)
+        } else {
+            nextResponder?.mouseUp(with: event)
+        }
+    }
 }
 
 

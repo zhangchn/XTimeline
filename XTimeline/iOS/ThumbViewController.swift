@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import CFNetwork
 
 class ThumbViewController: UITableViewController {
     typealias ImageEntity = LoadableImageEntity
@@ -38,9 +39,13 @@ class ThumbViewController: UITableViewController {
         ]
         #if targetEnvironment(simulator)
         configuration.connectionProxyDictionary = [
-            kCFStreamPropertySOCKSProxyHost: "127.0.0.1",
-            kCFStreamPropertySOCKSProxyPort: 1080,
-            kCFStreamPropertySOCKSVersion: kCFStreamSocketSOCKSVersion5
+            kCFStreamPropertyHTTPSProxyHost: "127.0.0.1",
+            kCFStreamPropertyHTTPSProxyPort: 8118,
+            kCFStreamPropertyHTTPProxyHost: "127.0.0.1",
+            kCFStreamPropertyHTTPProxyPort: 8118,
+            // kCFStreamPropertySOCKSProxyHost: "127.0.0.1",
+            // kCFStreamPropertySOCKSProxyPort: 1080,
+            // kCFStreamPropertySOCKSVersion: kCFStreamSocketSOCKSVersion5
         ]
         #endif
         session = URLSession(configuration: configuration)

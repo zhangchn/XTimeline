@@ -105,6 +105,11 @@
                                                 <action selector="reload:" target="Ady-hI-5gd" id="Yf5-pY-gHX"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="Fetch" keyEquivalent="F" id="5OD-iL-opE">
+                                            <connections>
+                                                <action selector="fetchPlaceholders:" target="Ady-hI-5gd" id="yAk-Az-EV6"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem isSeparatorItem="YES" id="aJh-i4-bef"/>
                                         <menuItem title="Page Setup…" keyEquivalent="P" id="qIS-W8-SiK">
                                             <modifierMask key="keyEquivalentModifierMask" shift="YES" command="YES"/>

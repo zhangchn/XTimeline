@@ -263,7 +263,7 @@ class RedditLoader: AbstractImageLoader {
         
         func queryBatch(sub: String, after: String = "", count: Int) -> [(String, String)] /*[(post_id, hash)]*/ {
             var result :[(String, String)] = []
-            let query1 = "SELECT post_id, MIN(hash) FROM rdt_child_data WHERE sub = ?1 AND post_id > ?2 GROUP BY post_id ORDER BY post_id LIMIT ?3;"
+            let query1 = after == "" ? "SELECT post_id, MIN(hash) FROM rdt_child_data WHERE sub = ?1 GROUP BY post_id ORDER BY post_id DESC LIMIT ?2;" : "SELECT post_id, MIN(hash) FROM rdt_child_data WHERE sub = ?1 AND post_id < ?2 GROUP BY post_id ORDER BY post_id DESC LIMIT ?3;"
             q.sync {
                 try? query1.withCString({ (cstr) in
                 
@@ -275,11 +275,20 @@ class RedditLoader: AbstractImageLoader {
                     guard after.withCString({ (afterStr) -> Bool in
                         guard sub.withCString({(subStr) -> Bool in
                             let r1 = sqlite3_bind_text(stmt, 1, subStr, Int32(strlen(subStr)), nil)
-                            let r2 = sqlite3_bind_text(stmt, 2, afterStr, Int32(strlen(afterStr)), nil)
-                            let r3 = sqlite3_bind_int(stmt, 3, Int32(count))
-                            guard  (r1 == SQLITE_OK) && (r2 == SQLITE_OK) && (r3 == SQLITE_OK) else {
-                                return false
+                            if after == "" {
+//                                let r2 = sqlite3_bind_text(stmt, 2, afterStr, Int32(strlen(afterStr)), nil)
+                                let r3 = sqlite3_bind_int(stmt, 2, Int32(count))
+                                guard  (r1 == SQLITE_OK) && (r3 == SQLITE_OK) else {
+                                    return false
+                                }
+                            } else {
+                                let r2 = sqlite3_bind_text(stmt, 2, afterStr, Int32(strlen(afterStr)), nil)
+                                let r3 = sqlite3_bind_int(stmt, 3, Int32(count))
+                                guard  (r1 == SQLITE_OK) && (r2 == SQLITE_OK) && (r3 == SQLITE_OK) else {
+                                    return false
+                                }
                             }
+                            
                             var r : Int32
                             r = sqlite3_step(stmt)
                             while (r == SQLITE_ROW) {
@@ -521,7 +530,7 @@ class RedditLoader: AbstractImageLoader {
         let useRedditSession = url.host!.hasSuffix(".redd.it") 
         let s = useRedditSession ? redditSession : session
         //let fileName = url.lastPathComponent
-        let isVideoTask = url.pathExtension == "mp4"
+        let isVideoTask = url.pathExtension == "mp4" || url.pathExtension == "gif"
         let task = s.downloadTask(with: url) { [weak self] (fileUrl, response, err)  in
             guard let self = self else {return}
             if let err = err {
@@ -545,7 +554,7 @@ class RedditLoader: AbstractImageLoader {
             }
             if let fileUrl = fileUrl, let cacheFileUrl = cacheFileUrl {
                 let contentType = (response as! HTTPURLResponse).allHeaderFields["Content-Type"] as? String
-                print("did fetch: \(url); " + (contentType.map { "type: " + $0 } ?? ""))
+                print("[\(self.name)] did fetch: \(url); " + (contentType.map { "type: " + $0 } ?? ""))
                 
                 return autoreleasepool(invoking: { ()->() in
                     switch contentType {
@@ -626,10 +635,12 @@ class RedditLoader: AbstractImageLoader {
                     let nextTask = self.videoTasks.removeFirst()
                     self.ongoingVideoTasks.append(nextTask)
                     nextTask.1.resume()
+                    print("[\(self.name)] will fetch: \(url); ")
                 }
             }
             
         } else {
+            print("[\(self.name)] will fetch: \(url); ")
             task.resume()
         }
     }
