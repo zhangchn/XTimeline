@@ -302,7 +302,9 @@ class ViewController: NSViewController {
                     break
                 }
             }
-            
+            if let loadMoreMenuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTag: 102) {
+                loadMoreMenuItem.isHidden = placeHolderIsLoading
+            }
             if let loadAllMenuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTag: 100) {
                 loadAllMenuItem.isHidden = placeHolderIsLoading
             }
@@ -317,7 +319,7 @@ class ViewController: NSViewController {
     func startLoadAll(_ sender: Any) {
         if !isLoadingAll {
             isLoadingAll = true
-            self.loadAll(sender)
+            self.batchLoad()
         }
     }
     
@@ -325,13 +327,12 @@ class ViewController: NSViewController {
     func loadOnce(_ sender: Any) {
         if !isLoadingAll {
             isLoadingAll = true
-            self.loadAll(sender)
+            self.batchLoad()
             isLoadingAll = false
         }
     }
     
-    @IBAction
-    func loadAll(_ sender: Any) {
+    func batchLoad() {
         guard isLoadingAll else { return }
         if let lastEntity = self.imageList.last {
             switch lastEntity {
@@ -363,7 +364,7 @@ class ViewController: NSViewController {
                             default:
                                 break
                             }
-                        }, completionHandler: { _ in self.loadAll(sender) })
+                        }, completionHandler: { _ in self.batchLoad() })
                     }
                 }
             default:
