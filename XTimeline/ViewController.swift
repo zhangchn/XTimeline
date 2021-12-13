@@ -109,6 +109,15 @@ class ViewController: NSViewController {
             }
         }
     }
+    
+    func setUpDCGANLoader(key: String, file: URL) {
+        self.name = "\(file.lastPathComponent)[\(key)]"
+        loader = DCGANLoader(fileURL: file, key: key, perBatch: 50)
+        loader.loadFirstPage { entities in
+            self.imageList = entities
+            self.bottomCollectionView.reloadData()
+        }
+    }
 
     func setUpRedditLoader(name: String, offline: Bool = false) {
         self.name = name
@@ -319,7 +328,7 @@ class ViewController: NSViewController {
     func startLoadAll(_ sender: Any) {
         if !isLoadingAll {
             isLoadingAll = true
-            self.batchLoad()
+            self.batchLoad(continueLoading: true)
         }
     }
     
@@ -328,11 +337,10 @@ class ViewController: NSViewController {
         if !isLoadingAll {
             isLoadingAll = true
             self.batchLoad()
-            isLoadingAll = false
         }
     }
     
-    func batchLoad() {
+    func batchLoad(continueLoading: Bool = false) {
         guard isLoadingAll else { return }
         if let lastEntity = self.imageList.last {
             switch lastEntity {
@@ -343,7 +351,6 @@ class ViewController: NSViewController {
                 self.loader.load(entity: .batchPlaceHolder((url, false))) { entityList in
                     DispatchQueue.main.async {
                         guard !entityList.isEmpty else {
-                            self.isLoadingAll = false
                             return
                         }
                         self.loadingItemCount += 0
@@ -364,10 +371,17 @@ class ViewController: NSViewController {
                             default:
                                 break
                             }
-                        }, completionHandler: { _ in self.batchLoad() })
+                        }, completionHandler: { _ in
+                            if (continueLoading) {
+                                self.batchLoad(continueLoading: continueLoading)
+                            } else {
+                                self.isLoadingAll = false
+                            }
+                        })
                     }
                 }
             default:
+                self.isLoadingAll = false
                 break
             }
         }
@@ -594,12 +608,14 @@ extension ViewController: NSCollectionViewDataSource {
                         // debugPrint("load image thumb at \(indexPath.item)")
                         if let thb: NSImage = attr["thumbnail"] as! NSImage? {
                             imageView.image = thb
-                            var reducedAttr = attr
-                            reducedAttr.removeValue(forKey: "thumbnail")
-                            // file url for image file in subreddit folder
-                            reducedAttr["thumbnailUrl"] = cacheUrl
-                            // invalidate the cgimage from cache immediately after showing it
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, reducedAttr))
+                            if url.scheme != "npy" {
+                                var reducedAttr = attr
+                                reducedAttr.removeValue(forKey: "thumbnail")
+                                // file url for image file in subreddit folder
+                                reducedAttr["thumbnailUrl"] = cacheUrl
+                                // invalidate the cgimage from cache immediately after showing it
+                                self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, reducedAttr))
+                            }
                         } else {
                             // fallback
                             imageView.image = NSImage(contentsOf: cacheUrl)
@@ -747,7 +763,9 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                     } else {
                         topPlayerView.player?.pause()
                         topPlayerView.isHidden = true
-                        if let image = NSImage(contentsOf: cacheUrl) {
+                        if imageUrl.scheme == "npy", let img = attr["thumbnail"] as? NSImage {
+                            topImageView.image = img
+                        } else if let image = NSImage(contentsOf: cacheUrl) {
                             topImageView.image = image
                             if cacheUrl.pathExtension == "gif" {
                                 topImageView.canDrawSubviewsIntoLayer = true
@@ -847,8 +865,9 @@ extension ViewController: NSCollectionViewDelegate {
         switch imageList[index] {
         case .batchPlaceHolder(_):
             return nil
-        case .image(let (_, cacheUrl, _)):
+        case .image(let (url, cacheUrl, _)):
             guard let cacheUrl = cacheUrl else {return nil}
+            guard url.scheme != "npy" else {return nil}
             return promiseProvider(for: cacheUrl)
         
         case .placeHolder(let (url, isLoading, attr)):
@@ -918,5 +937,8 @@ extension ViewController: NSWindowDelegate {
         if let ob = itemReloadObserver {
             NotificationCenter.default.removeObserver(ob)
         }
+    }
+    func windowDidBecomeKey(_ notification: Notification) {
+        self.isLoadingAll = !(!(self.isLoadingAll))
     }
 }

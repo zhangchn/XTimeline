@@ -21,14 +21,29 @@ class OpenViewController : NSViewController {
         switch kindSelector.indexOfSelectedItem {
         case 0:
             viewController.setUpRedditLoader(name: userField.stringValue)
+            viewController.dismiss(self)
         case 1:
             viewController.setUpRedditLoader(name: userField.stringValue, offline: true)
+            viewController.dismiss(self)
         case 2:
-            viewController.setUpTwitterMediaLoader(name: userField.stringValue)
+            // viewController.setUpTwitterMediaLoader(name: userField.stringValue)
+            let panel = NSOpenPanel()
+            panel.allowedFileTypes = ["npz"]
+            panel.beginSheetModal(for: view.window!) { response in
+                switch response {
+                case .OK:
+                    self.viewController.dismiss(self)
+                    // view
+                    print("panel.url: \(panel.urls)")
+                    self.viewController.setUpDCGANLoader(key: self.userField.stringValue, file: panel.urls.first!)
+                default:
+                    break
+                }
+            }
         default:
             break
         }
-        viewController.dismiss(self)
+        
     }
     
     override func dismiss(_ sender: Any?) {

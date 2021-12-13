@@ -3,10 +3,12 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DB14CC2E2766ED0A00ADCF0E /* DCGANLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB14CC2D2766ED0A00ADCF0E /* DCGANLoader.swift */; };
+		DB14CC322766FCE900ADCF0E /* SwiftNpy in Frameworks */ = {isa = PBXBuildFile; productRef = DB14CC312766FCE900ADCF0E /* SwiftNpy */; };
 		DB1B97D1216A3F9200A417AD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B97D0216A3F9200A417AD /* AppDelegate.swift */; };
 		DB1B97D3216A3F9200A417AD /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B97D2216A3F9200A417AD /* ViewController.swift */; };
 		DB1B97D5216A3F9500A417AD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DB1B97D4216A3F9500A417AD /* Assets.xcassets */; };
@@ -66,6 +68,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		DB14CC2D2766ED0A00ADCF0E /* DCGANLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DCGANLoader.swift; sourceTree = "<group>"; };
+		DB14CC302766F7D200ADCF0E /* swift-npy */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "swift-npy"; path = "../github/swift-npy"; sourceTree = "<group>"; };
+		DB14CC3327671B8100ADCF0E /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		DB1B97CD216A3F9200A417AD /* XTimeline.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = XTimeline.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB1B97D0216A3F9200A417AD /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		DB1B97D2216A3F9200A417AD /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -109,6 +114,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DB14CC322766FCE900ADCF0E /* SwiftNpy in Frameworks */,
 				DBF2E577223D243700C2BA4D /* AVKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -151,9 +157,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		DB14CC2F2766F7D200ADCF0E /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				DB14CC302766F7D200ADCF0E /* swift-npy */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
 		DB1B97C4216A3F9200A417AD = {
 			isa = PBXGroup;
 			children = (
+				DB14CC2F2766F7D200ADCF0E /* Packages */,
 				DB1B97CF216A3F9200A417AD /* XTimeline */,
 				DB1B97E2216A3F9500A417AD /* XTimelineTests */,
 				DB1B97ED216A3F9500A417AD /* XTimelineUITests */,
@@ -188,6 +203,7 @@
 				DB1B97FE216A403F00A417AD /* ThumbItem.swift */,
 				DB1B97FC216A403E00A417AD /* TwitterLoader.swift */,
 				DB1B9804216A502100A417AD /* RedditLoader.swift */,
+				DB14CC2D2766ED0A00ADCF0E /* DCGANLoader.swift */,
 				DB1B97D4216A3F9500A417AD /* Assets.xcassets */,
 				DB1B9802216A419000A417AD /* ThumbnailItem.xib */,
 				DB1B97D6216A3F9500A417AD /* Main.storyboard */,
@@ -252,6 +268,7 @@
 		DBF2E575223D243700C2BA4D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				DB14CC3327671B8100ADCF0E /* libz.tbd */,
 				DBF2E576223D243700C2BA4D /* AVKit.framework */,
 			);
 			name = Frameworks;
@@ -273,6 +290,9 @@
 			dependencies = (
 			);
 			name = XTimeline;
+			packageProductDependencies = (
+				DB14CC312766FCE900ADCF0E /* SwiftNpy */,
+			);
 			productName = XTimeline;
 			productReference = DB1B97CD216A3F9200A417AD /* XTimeline.app */;
 			productType = "com.apple.product-type.application";
@@ -482,6 +502,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DB14CC2E2766ED0A00ADCF0E /* DCGANLoader.swift in Sources */,
 				DB1B97D3216A3F9200A417AD /* ViewController.swift in Sources */,
 				DB1B97D1216A3F9200A417AD /* AppDelegate.swift in Sources */,
 				DB1B9805216A502100A417AD /* RedditLoader.swift in Sources */,
@@ -1030,6 +1051,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DB14CC312766FCE900ADCF0E /* SwiftNpy */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SwiftNpy;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = DB1B97C5216A3F9200A417AD /* Project object */;
 }
