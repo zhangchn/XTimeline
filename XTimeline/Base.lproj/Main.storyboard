@@ -110,6 +110,16 @@
                                                 <action selector="fetchPlaceholders:" target="Ady-hI-5gd" id="yAk-Az-EV6"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="Load All" tag="100" keyEquivalent="A" id="5Ar-Am-mIB" userLabel="Load All">
+                                            <connections>
+                                                <action selector="startLoadAll:" target="Ady-hI-5gd" id="7op-gd-857"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Stop Loading" tag="101" hidden="YES" keyEquivalent="S" id="Ihi-cE-HCi" userLabel="Stop loading">
+                                            <connections>
+                                                <action selector="stopLoading:" target="Ady-hI-5gd" id="MLf-go-a0b"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem isSeparatorItem="YES" id="aJh-i4-bef"/>
                                         <menuItem title="Page Setup…" keyEquivalent="P" id="qIS-W8-SiK">
                                             <modifierMask key="keyEquivalentModifierMask" shift="YES" command="YES"/>
@@ -706,7 +716,7 @@
                 </windowController>
                 <customObject id="Oky-zY-oP4" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="75" y="250"/>
+            <point key="canvasLocation" x="94" y="450"/>
         </scene>
         <!--Open View Controller-->
         <scene sceneID="gfA-Th-9d9">

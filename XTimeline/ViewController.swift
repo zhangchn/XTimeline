@@ -291,6 +291,91 @@ class ViewController: NSViewController {
         }
     }
     
+    var isLoadingAll: Bool = false {
+        didSet {
+            var placeHolderIsLoading = isLoadingAll
+            if let lastEntity = self.imageList.last {
+                switch lastEntity {
+                case .batchPlaceHolder(let (_, l)):
+                    placeHolderIsLoading = placeHolderIsLoading || l
+                default:
+                    break
+                }
+            }
+            
+            if let loadAllMenuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTag: 100) {
+                loadAllMenuItem.isHidden = placeHolderIsLoading
+            }
+            if let stopLoadingMenuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTag: 101) {
+                stopLoadingMenuItem.isHidden = !placeHolderIsLoading
+            }
+            
+        }
+    }
+    
+    @IBAction
+    func startLoadAll(_ sender: Any) {
+        if !isLoadingAll {
+            isLoadingAll = true
+            self.loadAll(sender)
+        }
+    }
+    
+    @IBAction
+    func loadOnce(_ sender: Any) {
+        if !isLoadingAll {
+            isLoadingAll = true
+            self.loadAll(sender)
+            isLoadingAll = false
+        }
+    }
+    
+    @IBAction
+    func loadAll(_ sender: Any) {
+        guard isLoadingAll else { return }
+        if let lastEntity = self.imageList.last {
+            switch lastEntity {
+            case .batchPlaceHolder(let (url, _)):
+                self.imageList[self.imageList.count - 1] = .batchPlaceHolder((url, true))
+                // continue loading
+                // isLoadingAll = true
+                self.loader.load(entity: .batchPlaceHolder((url, false))) { entityList in
+                    DispatchQueue.main.async {
+                        guard !entityList.isEmpty else {
+                            self.isLoadingAll = false
+                            return
+                        }
+                        self.loadingItemCount += 0
+                        self.bottomCollectionView.performBatchUpdates({
+                            let newLastEntity = entityList.last!
+                            let oldCount = self.imageList.count
+                            self.imageList.replaceSubrange((oldCount - 1)..<oldCount, with: entityList)
+                            self.bottomCollectionView.deleteItems(at: [IndexPath(item: oldCount - 1, section: 0)])
+                            var indexPaths = [IndexPath]()
+                            for i in (oldCount - 1)..<(oldCount - 1 + entityList.count) {
+                                indexPaths.append(IndexPath(item: i, section: 0))
+                            }
+                            self.bottomCollectionView.insertItems(at: Set(indexPaths))
+                            switch newLastEntity {
+                            case .batchPlaceHolder(let (url2, _)):
+                                self.imageList[self.imageList.count - 1] = .batchPlaceHolder((url2, false))
+                                
+                            default:
+                                break
+                            }
+                        }, completionHandler: { _ in self.loadAll(sender) })
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
+    }
+    @IBAction
+    func stopLoading(_ sender: Any) {
+        isLoadingAll = false
+    }
     override func prepare(for segue: NSStoryboardSegue, sender: Any?) {
         if segue.identifier == "open-sheet", let openVC = segue.destinationController as? OpenViewController {
             openVC.viewController = self
@@ -448,6 +533,7 @@ extension ViewController: NSCollectionViewDataSource {
                                 if oldSelection.count == 1 {
                                     self.bottomCollectionView.selectItems(at: oldSelection, scrollPosition: NSCollectionView.ScrollPosition.bottom)
                                 }
+                                self.loadingItemCount += 0
                             }, completionHandler: nil)
                         }
                         
