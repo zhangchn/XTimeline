@@ -531,10 +531,10 @@ class RedditLoader: AbstractImageLoader {
         let s = useRedditSession ? redditSession : session
         //let fileName = url.lastPathComponent
         let isVideoTask = url.pathExtension == "mp4" || url.pathExtension == "gif"
-        let task = s.downloadTask(with: url) { [weak self] (fileUrl, response, err)  in
+        let task = s.downloadTask(with: url) { [weak self] (fileUrl, response, err) in
             guard let self = self else {return}
             if let err = err {
-                print("error loading \(url.absoluteString): \(err.localizedDescription)")
+                print("[\(self.name)] error loading \(url.absoluteString): \(err.localizedDescription)")
             }
             for (tIdx, t) in self.ongoingVideoTasks.enumerated() {
                 if t.0 == url {
@@ -559,29 +559,6 @@ class RedditLoader: AbstractImageLoader {
                 return autoreleasepool(invoking: { ()->() in
                     switch contentType {
                         #if os(macOS)
-                        /*
-                    case "image/jpeg", "image/png":
-                        if let provider = fileUrl.path.withCString({ CGDataProvider(filename: $0)}) {
-                            let img: CGImage?
-                            if contentType == "image/jpeg" {
-                                img = CGImage(jpegDataProviderSource: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
-                            } else {
-                                img = CGImage(pngDataProviderSource: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
-                            }
-                            
-                            if let img = img {
-                                let nsImg = NSImage(cgImage: img, size: NSSize(width: img.width, height: img.height))
-                                if !self.fileManager.fileExists(atPath: cacheFileUrl.path) {
-                                    try? self.fileManager.copyItem(at: fileUrl, to: cacheFileUrl)
-                                }
-                                var extendedAttr = attributes
-                                extendedAttr["thumbnail"] = nsImg
-                                //extendedAttr["size"] = NSSize(width: img.width, height: img.height)
-                                return completion([EntityKind.image(url, cacheFileUrl, extendedAttr)])
-                            }
-                        }
-                        return completion([])
-                        */
                     case  "image/jpeg", "image/png", "image/gif":
                         if let d = try? Data(contentsOf: fileUrl) {
                             if let img = NSBitmapImageRep(data: d)?.cgImage {
@@ -646,7 +623,7 @@ class RedditLoader: AbstractImageLoader {
     }
     
     override func loadCachedPlaceHolder(with url: URL, attributes: [String: Any]) -> EntityKind? {
-        return autoreleasepool { () -> EntityKind? in
+//        return autoreleasepool { () -> EntityKind? in
             let cacheFileUrl = cacheFunc(url)
             if let cacheFileUrl = cacheFileUrl {
                 if cacheFileUrl.pathExtension == "mp4" {
@@ -687,7 +664,7 @@ class RedditLoader: AbstractImageLoader {
                 #endif
             }
             return nil
-        }
+//        }
     }
     
     override func cacheFileUrl(for url: URL) -> URL? {

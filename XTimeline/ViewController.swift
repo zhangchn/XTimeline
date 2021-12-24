@@ -91,8 +91,8 @@ class ViewController: NSViewController {
         bottomCollectionView.setDraggingSourceOperationMask([.copy, .delete], forLocal: false)
         
         // double click
-        itemReloadObserver = NotificationCenter.default.addObserver(forName: ThumbnailItem.reloadItem, object: nil, queue: .main) { note in
-            if let thumbItem = note.object as? ThumbnailItem {
+        itemReloadObserver = NotificationCenter.default.addObserver(forName: ThumbnailItem.reloadItem, object: nil, queue: .main) { [weak self] note in
+            if let self = self, let thumbItem = note.object as? ThumbnailItem {
                 if let indexPath = self.bottomCollectionView.indexPath(for: thumbItem) {
                     let item = self.imageList[indexPath.item]
                         
@@ -234,19 +234,11 @@ class ViewController: NSViewController {
             switch item {
             case .placeHolder(let (url, isLoading, attr)):
                 guard !isLoading else {continue}
-                self.imageList[itemIdx] = ImageEntity.placeHolder((url, true, attr))
+                guard attr["thumbnailUrl"] == nil else {continue}
+                self.imageList[itemIdx] = ImageEntity.placeHolder((url, true, attr))                
                 
-                let urlPath = url.host?.contains("v.redd.it") ?? false ? url.path : url.lastPathComponent
-                let author = attr["author"] as? String ?? ""
-                let title = attr["title"] as? String ?? ""
-                let selftext = attr["text"] as? String ?? ""
-                let domain = attr["domain"] as? String ?? ""
-                let toolTip = domain + ": " + urlPath + "\n" + author + "\n" + title +  (selftext.isEmpty ? "" : ("\n\"\"" + selftext + "\"\"\n"))
-
                 
                 DispatchQueue.main.async {
-                    self.toolTips[indexPath] = toolTip
-                    self.shortTips[indexPath] = domain + ": " + urlPath + " " + title
                     self.loadingItemCount += 1
                 }
                 DispatchQueue.global().async {
@@ -266,7 +258,7 @@ class ViewController: NSViewController {
                             return
                         }
                         switch entities.first! {
-                        case .image:
+                        case .image(let (url, fileUrl, attr)):
                             DispatchQueue.main.async {
                                 guard previousGeneration == self.generation else {
                                     debugPrint("generation miss 2: previous \(previousGeneration), now is \(self.generation)")
@@ -275,14 +267,22 @@ class ViewController: NSViewController {
                                 self.imageList[itemIdx] = entities.first!
                                 guard self.bottomCollectionView.indexPathsForVisibleItems().contains(indexPath) else {
                                     // Do not trigger re-rendering for invisible cell
+                                    if let fileUrl = fileUrl {
+                                        if !fileUrl.path.hasSuffix(".mp4") {
+                                            var newAttr = attr
+                                            newAttr["thumbnailUrl"] = fileUrl
+                                            newAttr.removeValue(forKey: "thumbnail")
+                                            self.imageList[itemIdx] = .placeHolder((url, false, newAttr))
+                                        }
+                                    }
                                     return
                                 }
                                 let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
                                 self.bottomCollectionView.reloadItems(at: [indexPath])
                                 if shouldReselect {
+                                    self.bottomCollectionView.deselectAll(nil)
                                     self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
                                 }
-
                             }
                         default:
                             // placeHolder or batchPlaceHolder failed to load
@@ -311,15 +311,18 @@ class ViewController: NSViewController {
                     break
                 }
             }
-            if let loadMoreMenuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTag: 102) {
-                loadMoreMenuItem.isHidden = placeHolderIsLoading
+            if let submenu = self.view.window?.menu?.item(withTitle: "File")?.submenu {
+                if let loadMoreMenuItem = submenu.item(withTag: 102) {
+                    loadMoreMenuItem.isHidden = placeHolderIsLoading
+                }
+                if let loadAllMenuItem = submenu.item(withTag: 100) {
+                    loadAllMenuItem.isHidden = placeHolderIsLoading
+                }
+                if let stopLoadingMenuItem = submenu.item(withTag: 101) {
+                    stopLoadingMenuItem.isHidden = !placeHolderIsLoading
+                }
             }
-            if let loadAllMenuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTag: 100) {
-                loadAllMenuItem.isHidden = placeHolderIsLoading
-            }
-            if let stopLoadingMenuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTag: 101) {
-                stopLoadingMenuItem.isHidden = !placeHolderIsLoading
-            }
+            
             
         }
     }
@@ -372,16 +375,20 @@ class ViewController: NSViewController {
                                 break
                             }
                         }, completionHandler: { _ in
-                            if (continueLoading) {
-                                self.batchLoad(continueLoading: continueLoading)
-                            } else {
-                                self.isLoadingAll = false
+                            DispatchQueue.main.async {
+                                if (continueLoading) {
+                                    self.batchLoad(continueLoading: continueLoading)
+                                } else {
+                                    self.isLoadingAll = false
+                                }
                             }
                         })
                     }
                 }
             default:
-                self.isLoadingAll = false
+                DispatchQueue.main.async {
+                    self.isLoadingAll = false
+                }
                 break
             }
         }
@@ -456,6 +463,7 @@ class ViewController: NSViewController {
     
     override func moveToBeginningOfDocument(_ sender: Any?) {
         // CMD + up
+        bottomCollectionView.deselectAll(nil)
         bottomCollectionView.selectItems(at: [IndexPath(item: 0, section: 0)], scrollPosition: .left)
     }
     
@@ -546,6 +554,7 @@ extension ViewController: NSCollectionViewDataSource {
                                 self.bottomCollectionView.deleteItems(at: [indexPath])
                                 self.bottomCollectionView.insertItems(at: indexPaths)
                                 if oldSelection.count == 1 {
+                                    self.bottomCollectionView.deselectAll(nil)
                                     self.bottomCollectionView.selectItems(at: oldSelection, scrollPosition: NSCollectionView.ScrollPosition.bottom)
                                 }
                                 self.loadingItemCount += 0
@@ -564,6 +573,7 @@ extension ViewController: NSCollectionViewDataSource {
                                 let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
                                 self.bottomCollectionView!.reloadItems(at: [indexPath])
                                 if shouldReselect {
+                                    self.bottomCollectionView.deselectAll(nil)
                                     self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
                                 }
                             }
@@ -671,6 +681,7 @@ extension ViewController: NSCollectionViewDataSource {
                             let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
                             self.bottomCollectionView.reloadItems(at: [indexPath])
                             if shouldReselect {
+                                self.bottomCollectionView.deselectAll(nil)
                                 self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
                             }
 

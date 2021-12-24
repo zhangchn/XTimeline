@@ -861,7 +861,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tgfbeta.XTimeline-iOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -882,7 +882,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tgfbeta.XTimeline-iOS";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VALIDATE_PRODUCT = YES;
 			};
@@ -906,7 +906,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tgfbeta.XTimeline-iOSTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/XTimeline-iOS.app/XTimeline-iOS";
 			};
@@ -930,7 +930,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tgfbeta.XTimeline-iOSTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/XTimeline-iOS.app/XTimeline-iOS";
 				VALIDATE_PRODUCT = YES;
@@ -954,7 +954,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tgfbeta.XTimeline-iOSUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = "XTimeline-iOS";
 			};
@@ -977,7 +977,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "com.tgfbeta.XTimeline-iOSUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 4.2;
+				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = "XTimeline-iOS";
 				VALIDATE_PRODUCT = YES;
