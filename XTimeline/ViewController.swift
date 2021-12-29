@@ -238,62 +238,59 @@ class ViewController: NSViewController {
                 self.imageList[itemIdx] = ImageEntity.placeHolder((url, true, attr))                
                 
                 
-                DispatchQueue.main.async {
-                    self.loadingItemCount += 1
-                }
-                DispatchQueue.global().async {
-                    self.loader?.load(entity: item) { (entities) in
-                        guard previousGeneration == self.generation else {
-                            debugPrint("generation miss 1: previous \(previousGeneration), now is \(self.generation)")
-                            return
-                        }
+                self.loadingItemCount += 1
+                self.loader?.load(entity: item) { (entities) in
+                    guard previousGeneration == self.generation else {
+                        debugPrint("generation miss 1: previous \(previousGeneration), now is \(self.generation)")
+                        return
+                    }
+                    DispatchQueue.main.async {
+                        self.loadingItemCount -= 1
+                    }
+                    guard !entities.isEmpty else {
+                        // placeHolder failed to load
                         DispatchQueue.main.async {
-                            self.loadingItemCount -= 1
+                            self.imageList[itemIdx] = ImageEntity.placeHolder((url, false, attr))
                         }
-                        guard !entities.isEmpty else {
-                            // placeHolder failed to load
-                            DispatchQueue.main.async {
-                                self.imageList[itemIdx] = ImageEntity.placeHolder((url, false, attr))
+                        return
+                    }
+                    switch entities.first! {
+                    case .image(let (url, fileUrl, attr)):
+                        DispatchQueue.main.async {
+                            guard previousGeneration == self.generation else {
+                                debugPrint("generation miss 2: previous \(previousGeneration), now is \(self.generation)")
+                                return
                             }
-                            return
-                        }
-                        switch entities.first! {
-                        case .image(let (url, fileUrl, attr)):
-                            DispatchQueue.main.async {
-                                guard previousGeneration == self.generation else {
-                                    debugPrint("generation miss 2: previous \(previousGeneration), now is \(self.generation)")
-                                    return
-                                }
-                                self.imageList[itemIdx] = entities.first!
-                                guard self.bottomCollectionView.indexPathsForVisibleItems().contains(indexPath) else {
-                                    // Do not trigger re-rendering for invisible cell
-                                    if let fileUrl = fileUrl {
-                                        if !fileUrl.path.hasSuffix(".mp4") {
-                                            var newAttr = attr
-                                            newAttr["thumbnailUrl"] = fileUrl
-                                            newAttr.removeValue(forKey: "thumbnail")
-                                            self.imageList[itemIdx] = .placeHolder((url, false, newAttr))
-                                        }
+                            self.imageList[itemIdx] = entities.first!
+                            guard self.bottomCollectionView.indexPathsForVisibleItems().contains(indexPath) else {
+                                // Do not trigger re-rendering for invisible cell
+                                if let fileUrl = fileUrl {
+                                    if !fileUrl.path.hasSuffix(".mp4") {
+                                        var newAttr = attr
+                                        newAttr["thumbnailUrl"] = fileUrl
+                                        newAttr.removeValue(forKey: "thumbnail")
+                                        self.imageList[itemIdx] = .placeHolder((url, false, newAttr))
                                     }
-                                    return
                                 }
-                                let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
-                                self.bottomCollectionView.reloadItems(at: [indexPath])
-                                if shouldReselect {
-                                    self.bottomCollectionView.deselectAll(nil)
-                                    self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
-                                }
+                                return
                             }
-                        default:
-                            // placeHolder or batchPlaceHolder failed to load
-                            debugPrint("fail placeholder at \(indexPath.item)")
-
-                            DispatchQueue.main.async {
-                                self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, attr))
+                            let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
+                            self.bottomCollectionView.reloadItems(at: [indexPath])
+                            if shouldReselect {
+                                self.bottomCollectionView.deselectAll(nil)
+                                self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
                             }
+                        }
+                    default:
+                        // placeHolder or batchPlaceHolder failed to load
+                        debugPrint("fail placeholder at \(indexPath.item)")
+                        
+                        DispatchQueue.main.async {
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, attr))
                         }
                     }
                 }
+                
             default:
                 break
             }

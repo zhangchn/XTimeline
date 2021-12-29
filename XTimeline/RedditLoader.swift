@@ -367,6 +367,7 @@ class RedditLoader: AbstractImageLoader {
     var videoTasks = [VideoDownloadTask]()
     var ongoingVideoTasks = [VideoDownloadTask]()
     init(name: String, session: URLSession, external: Bool = false) {
+        
         self.name = name
         self.useExternalStorage = external
         self.session = session
@@ -523,6 +524,7 @@ class RedditLoader: AbstractImageLoader {
         task.resume()
     }
     
+    // Call this in Main Thread
     override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes: [String: Any], completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
 //        let useRedditSession = false // url.host!.hasSuffix(".redd.it") ||
@@ -544,7 +546,8 @@ class RedditLoader: AbstractImageLoader {
             }
                         
             defer {
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self = self else {return}
                     while self.ongoingVideoTasks.count < 3 && !self.videoTasks.isEmpty {
                         let nextTask = self.videoTasks.removeFirst()
                         self.ongoingVideoTasks.append(nextTask)
@@ -606,7 +609,7 @@ class RedditLoader: AbstractImageLoader {
             return completion([])
         }
         if isVideoTask {
-            DispatchQueue.main.async {
+            //DispatchQueue.main.async {
                 self.videoTasks.append((url, task))
                 while self.ongoingVideoTasks.count < 3 && !self.videoTasks.isEmpty {
                     let nextTask = self.videoTasks.removeFirst()
@@ -614,7 +617,7 @@ class RedditLoader: AbstractImageLoader {
                     nextTask.1.resume()
                     print("[\(self.name)] will fetch: \(url); ")
                 }
-            }
+            //}
             
         } else {
             print("[\(self.name)] will fetch: \(url); ")
