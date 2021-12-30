@@ -366,8 +366,9 @@ class RedditLoader: AbstractImageLoader {
     var cachePath: String
     var videoTasks = [VideoDownloadTask]()
     var ongoingVideoTasks = [VideoDownloadTask]()
+    var ongoingVideoTasksLock: DispatchSemaphore
     init(name: String, session: URLSession, external: Bool = false) {
-        
+        self.ongoingVideoTasksLock = DispatchSemaphore(value: 1)
         self.name = name
         self.useExternalStorage = external
         self.session = session
@@ -538,22 +539,23 @@ class RedditLoader: AbstractImageLoader {
             if let err = err {
                 print("[\(self.name)] error loading \(url.absoluteString): \(err.localizedDescription)")
             }
+            self.ongoingVideoTasksLock.wait()
             for (tIdx, t) in self.ongoingVideoTasks.enumerated() {
                 if t.0 == url {
                     self.ongoingVideoTasks.remove(at: tIdx)
                     break
                 }
             }
+            self.ongoingVideoTasksLock.signal()
                         
             defer {
-                DispatchQueue.main.async { [weak self] in
-                    guard let self = self else {return}
-                    while self.ongoingVideoTasks.count < 3 && !self.videoTasks.isEmpty {
-                        let nextTask = self.videoTasks.removeFirst()
-                        self.ongoingVideoTasks.append(nextTask)
-                        nextTask.1.resume()
-                    }
+                self.ongoingVideoTasksLock.wait()
+                while self.ongoingVideoTasks.count < 3 && !self.videoTasks.isEmpty {
+                    let nextTask = self.videoTasks.removeFirst()
+                    self.ongoingVideoTasks.append(nextTask)
+                    nextTask.1.resume()
                 }
+                self.ongoingVideoTasksLock.signal()
             }
             if let fileUrl = fileUrl, let cacheFileUrl = cacheFileUrl {
                 let contentType = (response as! HTTPURLResponse).allHeaderFields["Content-Type"] as? String
@@ -605,19 +607,20 @@ class RedditLoader: AbstractImageLoader {
                         return completion([])
                     }
                 })
+            } else {
+                return completion([])
             }
-            return completion([])
         }
         if isVideoTask {
-            //DispatchQueue.main.async {
-                self.videoTasks.append((url, task))
-                while self.ongoingVideoTasks.count < 3 && !self.videoTasks.isEmpty {
-                    let nextTask = self.videoTasks.removeFirst()
-                    self.ongoingVideoTasks.append(nextTask)
-                    nextTask.1.resume()
-                    print("[\(self.name)] will fetch: \(url); ")
-                }
-            //}
+            self.ongoingVideoTasksLock.wait()
+            self.videoTasks.append((url, task))
+            while self.ongoingVideoTasks.count < 3 && !self.videoTasks.isEmpty {
+                let nextTask = self.videoTasks.removeFirst()
+                self.ongoingVideoTasks.append(nextTask)
+                nextTask.1.resume()
+                print("[\(self.name)] will fetch: \(url); ")
+            }
+            self.ongoingVideoTasksLock.signal()
             
         } else {
             print("[\(self.name)] will fetch: \(url); ")
