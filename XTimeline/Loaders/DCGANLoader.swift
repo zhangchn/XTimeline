@@ -10,6 +10,12 @@ import Foundation
 import simd
 import SwiftNpy
 import AppKit
+import CoreMedia
+
+enum SampleColor {
+    case rgb
+    case grey
+}
 
 class DCGANLoader: AbstractImageLoader {
     var fileURL: URL
@@ -19,13 +25,18 @@ class DCGANLoader: AbstractImageLoader {
     let key: String
     var imageSize = 56
     var itemCount = -1
-    let colorSpace: CGColorSpace!
+    let sampleColor: SampleColor
+    let channelNumber: Int
+    let colorSpace: CGColorSpace
+    let itemBytes: [Int64]
+    let bufferChannels: Int
 
     init(fileURL: URL, key: String, perBatch size: Int) {
         self.fileURL = fileURL
         self.batchSize = size
         self.key = key
-        self.colorSpace = CGColorSpace(name: CGColorSpace.linearGray)
+        
+        
         self.zippedFileLoader = try! Npz(contentsOf: fileURL)
         let filename = fileURL.lastPathComponent
         if let keyRange = filename.range(of: key) {
@@ -35,13 +46,34 @@ class DCGANLoader: AbstractImageLoader {
                 self.imageSize = Int(parts[0]) ?? 56
                 self.itemCount = Int(parts[1]) ?? -1
             }
+            
         }
+        self.sampleColor = filename.contains("rgb") ? .rgb : .grey
+        var key: String
+        switch self.sampleColor {
+        case .grey:
+            self.colorSpace = CGColorSpace(name: CGColorSpace.linearGray)!
+            self.channelNumber = 1
+            self.bufferChannels = 1
+            key = "grey"
+        case .rgb:
+            self.colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+            self.channelNumber = 3
+            self.bufferChannels = 4
+            key = "rgb"
+        }
+        
+        self.itemBytes = self.zippedFileLoader[key]!.elements()
+        self.itemCount = self.zippedFileLoader[key]!.shape[0] / self.imageSize / self.imageSize / self.channelNumber
+        
     }
     
     override func loadFirstPage(completion: @escaping ([AbstractImageLoader.EntityKind]) -> ()) {
         let url = URL(string: "np://?idx=\(loadIndex)&count=\(batchSize)")!
         loadNextBatch(with: url, completion: completion)
     }
+    
+    //lazy var itemBytes: [Int64] = { zippedFileLoader[zippedFileLoader.keys.first!]!.elements() } ()
     
     override func loadNextBatch(with url: URL, completion: @escaping ([AbstractImageLoader.EntityKind]) -> ()) {
         // parse url
@@ -58,47 +90,64 @@ class DCGANLoader: AbstractImageLoader {
                 }
             }
         let queryDict = Dictionary<String, Int>(uniqueKeysWithValues: pairs)
-        if let idx = queryDict["idx"], let count = queryDict["count"] {
-            print("shape: \(zippedFileLoader[key]!.shape)")
-            var itemBytes: [Int64] = zippedFileLoader[key]!.elements()
-            var results = [EntityKind]()
-            var buffer = [UInt8](repeating: 0, count: imageSize * imageSize)
-            let itemCount = zippedFileLoader[key]!.shape[0] / imageSize / imageSize
-            for i in 0..<count {
-                if idx + i >= itemCount {
-                    break
-                }
-                let context = itemBytes.withUnsafeBytes { srcPtr -> CGContext? in
-                    return buffer.withUnsafeMutableBytes { dstPtr -> CGContext? in
-                        for j in 0..<imageSize {
-                            for k in 0..<imageSize {
-                                dstPtr[k + j * imageSize] = srcPtr[((idx + i) * imageSize * imageSize + j * imageSize + k) * 8]
-                            }
-                        }
-                        return CGContext(data: dstPtr.baseAddress!, width: imageSize, height: imageSize, bitsPerComponent: 8, bytesPerRow: imageSize, space: colorSpace, bitmapInfo: CGImageAlphaInfo.none.rawValue)
+        DispatchQueue.global().async { [weak self] in
+            guard let self = self else { return }
+//            let zippedFileLoader = self.zippedFileLoader!
+            let imageSize = self.imageSize
+            let channelNumber = self.channelNumber
+            let colorSpace = self.colorSpace
+            let itemBytes = self.itemBytes
+            let itemCount = self.itemCount
+            let bufferChannels = self.bufferChannels
+
+            if let idx = queryDict["idx"], let count = queryDict["count"] {
+//                let key = zippedFileLoader.keys.first!
+//                print("shape: \(zippedFileLoader[key]!.shape)")
+//                let itemBytes: [Int64] = zippedFileLoader[key]!.elements()
+                var results = [EntityKind]()
+                var buffer = [UInt8](repeating: 0, count: imageSize * imageSize * bufferChannels)
+                //let itemCount = zippedFileLoader[key]!.shape[0] / imageSize / imageSize / channelNumber
+                for i in 0..<count {
+                    if idx + i >= itemCount {
+                        break
                     }
+                    let context = itemBytes.withUnsafeBytes { srcPtr -> CGContext? in
+                        return buffer.withUnsafeMutableBytes { dstPtr -> CGContext? in
+                            for j in 0..<imageSize {
+                                for k in 0..<imageSize {
+                                    for l in 0..<channelNumber {
+                                        dstPtr[(k + j * imageSize) * bufferChannels + l] = srcPtr[(((idx + i) * imageSize * imageSize + j * imageSize + k) * channelNumber + l) * 8]
+                                    }
+                                }
+                            }
+                            return CGContext(data: dstPtr.baseAddress!, width: imageSize, height: imageSize, bitsPerComponent: 8, bytesPerRow: imageSize * bufferChannels, space: colorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+                        }
+                    }
+                    
+                    
+                    if let cgImage = context?.makeImage() {
+                        let nsImage = NSImage(cgImage: cgImage, size: NSMakeSize(CGFloat(imageSize * 4), CGFloat(imageSize * 4)))
+                        var extendedAttr = [String: Any]()
+                        extendedAttr["thumbnail"] = nsImage
+                        extendedAttr["title"] = "\(idx + i)"
+                        extendedAttr["author"] = ""
+                        extendedAttr["text"] = ""
+                        let url = URL(string: "npy://?idx=\(idx + i)")!
+                        results.append(.image((url, url, extendedAttr)))
+                    }
+                    
                 }
-                
-                
-                if let cgImage = context?.makeImage() {
-                    let nsImage = NSImage(cgImage: cgImage, size: NSMakeSize(CGFloat(imageSize * 4), CGFloat(imageSize * 4)))
-                    var extendedAttr = [String: Any]()
-                    extendedAttr["thumbnail"] = nsImage
-                    extendedAttr["title"] = "\(idx + i)"
-                    extendedAttr["author"] = ""
-                    extendedAttr["text"] = ""
-                    let url = URL(string: "npy://?idx=\(idx + i)")!
-                    results.append(.image((url, url, extendedAttr)))
+                let resultsCount = results.count
+                if !results.isEmpty && idx + resultsCount < itemCount {
+                    let batchUrl = URL(string: "np://?idx=\(idx + resultsCount)&count=\(count)")!
+                    print("appending batch placeholder: \(idx + resultsCount)")
+                    results.append(.batchPlaceHolder((batchUrl, false)))
                 }
-                
+                return completion(results)
+            } else {
+                return completion([])
             }
-            let resultsCount = results.count
-            if !results.isEmpty && idx + resultsCount < itemCount {
-                let batchUrl = URL(string: "np://?idx=\(idx + resultsCount)&count=\(count)")!
-                print("appending batch placeholder: \(idx + resultsCount)")
-                results.append(.batchPlaceHolder((batchUrl, false)))
-            }
-            return completion(results)
         }
+        
     }
 }

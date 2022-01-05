@@ -115,7 +115,9 @@ class ViewController: NSViewController {
         loader = DCGANLoader(fileURL: file, key: key, perBatch: 50)
         loader.loadFirstPage { entities in
             self.imageList = entities
-            self.bottomCollectionView.reloadData()
+            DispatchQueue.main.async {
+                self.bottomCollectionView.reloadData()
+            }
         }
     }
 
