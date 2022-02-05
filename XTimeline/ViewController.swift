@@ -264,7 +264,21 @@ class ViewController: NSViewController {
             }
         }
     }
-
+    
+    func setUpPlainDirLoader(_ url: URL) {
+        self.name = "\(url.lastPathComponent)"
+        loader = PlainDirLoader(fileUrl: url)
+        DispatchQueue.global().async {
+            self.setUpYolo()
+        }
+        loader.loadFirstPage { entities in
+            self.imageList = entities
+            DispatchQueue.main.async {
+                self.bottomCollectionView.reloadData()
+            }
+        }
+    }
+    
     func setUpRedditLoader(name: String, offline: Bool = false) {
         self.name = name
         self.view.window?.title = name
@@ -489,6 +503,39 @@ class ViewController: NSViewController {
         }
     }
     
+    @IBAction
+    func showOpenPanel(_ sender: Any) {
+        let panel = NSOpenPanel()
+        panel.allowedFileTypes = ["npz"]
+        panel.beginSheetModal(for: view.window!) { response in
+            switch response {
+            case .OK:
+                // view
+                print("panel.url: \(panel.urls)")
+                self.setUpDCGANLoader(key: "", file: panel.urls.first!)
+            default:
+                break
+            }
+        }
+    }
+    
+    @IBAction
+    func showOpenDirectoryPanel(_ sender: Any) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.beginSheetModal(for: view.window!) { response in
+            switch response {
+            case .OK:
+                // view
+                print("panel.url: \(panel.urls)")
+                self.setUpPlainDirLoader(panel.urls.first!)
+            default:
+                break
+            }
+        }
+    }
+    
     func batchLoad(continueLoading: Bool = false) {
         guard isLoadingAll else { return }
         if let lastEntity = self.imageList.last {
@@ -614,7 +661,13 @@ class ViewController: NSViewController {
     }
     
     func showTopInfo(_ attr: [String: Any]) {
-        topInfoLabel.stringValue = (attr["title"] as! String) + "\nBy: " + (attr["author"] as! String) + "\n" + (attr["text"] as! String)
+        if let title = attr["title"] {
+            topInfoLabel.stringValue = (attr["title"] as? String ?? "") + "\nBy: " + (attr["author"] as? String ?? "") + "\n" + (attr["text"] as? String ?? "")
+        } else if let title = attr["name"] {
+            topInfoLabel.stringValue = title as? String ?? ""
+        } else {
+            topInfoLabel.stringValue = ""
+        }
         reshowTopInfo()
     }
     @objc

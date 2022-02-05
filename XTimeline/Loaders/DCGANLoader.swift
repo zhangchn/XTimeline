@@ -22,7 +22,7 @@ class DCGANLoader: AbstractImageLoader {
     var batchSize: Int
     var loadIndex: Int = 0
     let zippedFileLoader: Npz!
-    let key: String
+    // let key: String
     var imageSize = 56
     var itemCount = -1
     let sampleColor: SampleColor
@@ -34,7 +34,7 @@ class DCGANLoader: AbstractImageLoader {
     init(fileURL: URL, key: String, perBatch size: Int) {
         self.fileURL = fileURL
         self.batchSize = size
-        self.key = key
+        // self.key = key
         
         
         self.zippedFileLoader = try! Npz(contentsOf: fileURL)

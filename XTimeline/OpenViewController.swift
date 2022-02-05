@@ -48,7 +48,7 @@ class OpenViewController : NSViewController {
     
     override func dismiss(_ sender: Any?) {
         super.dismiss(sender)
-        self.viewController.close()
+        // self.viewController.close()
     }
     var existingText = ""
 }

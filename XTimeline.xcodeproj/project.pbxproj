@@ -36,6 +36,7 @@
 		DB7358AB2211740200150E4C /* ThumbViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7358A9221173FE00150E4C /* ThumbViewController.swift */; };
 		DB7358AE2212569300150E4C /* AddViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7358AC2212568800150E4C /* AddViewController.swift */; };
 		DBF1B76E27AE7D0200128E1D /* best.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = DBF1B76D27AE7D0200128E1D /* best.mlmodel */; };
+		DBF1B77027AEF1C500128E1D /* PlainDirLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF1B76F27AEF1C500128E1D /* PlainDirLoader.swift */; };
 		DBF2E577223D243700C2BA4D /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBF2E576223D243700C2BA4D /* AVKit.framework */; };
 /* End PBXBuildFile section */
 
@@ -94,7 +95,6 @@
 		DB1B9804216A502100A417AD /* RedditLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditLoader.swift; sourceTree = "<group>"; };
 		DB234093277D926700E02D67 /* RedditDB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditDB.swift; sourceTree = "<group>"; };
 		DB234095277D92C600E02D67 /* RedditData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditData.swift; sourceTree = "<group>"; };
-		DB2340992786A26C00E02D67 /* best0.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = best0.mlmodel; sourceTree = "<group>"; };
 		DB5D22A1217C6249002B98CB /* OpenViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenViewController.swift; sourceTree = "<group>"; };
 		DB73587722114F6900150E4C /* XTimeline-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "XTimeline-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB73587922114F6900150E4C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -113,6 +113,7 @@
 		DB7358A9221173FE00150E4C /* ThumbViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbViewController.swift; sourceTree = "<group>"; };
 		DB7358AC2212568800150E4C /* AddViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddViewController.swift; sourceTree = "<group>"; };
 		DBF1B76D27AE7D0200128E1D /* best.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = best.mlmodel; sourceTree = "<group>"; };
+		DBF1B76F27AEF1C500128E1D /* PlainDirLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainDirLoader.swift; sourceTree = "<group>"; };
 		DBF2E576223D243700C2BA4D /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -203,7 +204,6 @@
 			isa = PBXGroup;
 			children = (
 				DBF1B76D27AE7D0200128E1D /* best.mlmodel */,
-				DB2340992786A26C00E02D67 /* best0.mlmodel */,
 				DB73587822114F6900150E4C /* iOS */,
 				DB1B97D0216A3F9200A417AD /* AppDelegate.swift */,
 				DB1B97D2216A3F9200A417AD /* ViewController.swift */,
@@ -254,6 +254,7 @@
 				DB1B97FC216A403E00A417AD /* TwitterLoader.swift */,
 				DB234097277D932000E02D67 /* Reddit */,
 				DB14CC2D2766ED0A00ADCF0E /* DCGANLoader.swift */,
+				DBF1B76F27AEF1C500128E1D /* PlainDirLoader.swift */,
 			);
 			path = Loaders;
 			sourceTree = "<group>";
@@ -534,6 +535,7 @@
 				DBF1B76E27AE7D0200128E1D /* best.mlmodel in Sources */,
 				DB1B97D1216A3F9200A417AD /* AppDelegate.swift in Sources */,
 				DB1B9805216A502100A417AD /* RedditLoader.swift in Sources */,
+				DBF1B77027AEF1C500128E1D /* PlainDirLoader.swift in Sources */,
 				DB1B9801216A403F00A417AD /* ThumbItem.swift in Sources */,
 				DB1B97FF216A403F00A417AD /* TwitterLoader.swift in Sources */,
 				DB1B9800216A403F00A417AD /* AbstractEntityAndLoader.swift in Sources */,
