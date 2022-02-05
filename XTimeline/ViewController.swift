@@ -9,6 +9,37 @@
 import Cocoa
 import AVFoundation
 import AVKit
+import Vision
+
+enum NMSStatus {
+    case notDetermined
+    case accepted
+    case dropped
+}
+
+struct Anchor : Comparable {
+    static func < (lhs: Anchor, rhs: Anchor) -> Bool {
+        return lhs.confidence < rhs.confidence
+    }
+    
+    static func iou(_ lhs: Anchor, _ rhs: Anchor) -> CGFloat {
+        let intersection = NSIntersectionRect(NSRectFromCGRect(lhs.rect), NSRectFromCGRect(rhs.rect))
+        let union = NSUnionRect(NSRectFromCGRect(lhs.rect), NSRectFromCGRect(rhs.rect))
+        return intersection.width * intersection.height / union.width / union.height
+    }
+    
+    let rect: CGRect
+    let confidence: Float
+    var status: NMSStatus
+    init(rect: CGRect, confidence: Float) {
+        self.rect = rect
+        self.confidence = confidence
+        self.status = .notDetermined
+    }
+    func iou(_ another: Anchor) -> CGFloat {
+        return Anchor.iou(self, another)
+    }
+}
 
 func min(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
     return CGPoint(x: min(a.x, b.x), y: min(a.y, b.y))
@@ -110,6 +141,119 @@ class ViewController: NSViewController {
         }
     }
     
+    var yoloRequest: VNCoreMLRequest?
+    func setUpYolo() {
+        if #available(macOS 10.15, *) {
+            // let defaultConfig = MLModelConfiguration()
+            guard let modelUrl = Bundle.main.url(forResource: "best", withExtension: "mlmodelc"), let yoloMLModel = try? MLModel(contentsOf: modelUrl), let yoloModel = try? VNCoreMLModel(for: yoloMLModel) else {
+                print("model failed")
+                return
+            }
+            let detectionRequest = VNCoreMLRequest(model: yoloModel) { request, error in
+                if let err = error {
+                    print("detect error: \(err)")
+                    return
+                }
+                guard let results = request.results else {
+                    print("no results")
+                    return
+                }
+                let imageSize = self.topImageView.image?.size ?? .zero
+                
+                let bytes = malloc(Int(imageSize.width * imageSize.height) * 4)
+                let context = CGContext(data: bytes, width: Int(imageSize.width), height: Int(imageSize.height), bitsPerComponent: 8, bytesPerRow: Int(imageSize.width) * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)
+                let cgImage = self.topImageView.image?.cgImage(forProposedRect: nil, context: nil, hints: nil)
+                if let cgImage = cgImage {
+                    context?.draw(cgImage, in: CGRect(x: 0, y: 0, width: imageSize.width, height: imageSize.height))
+                    context?.setStrokeColor(CGColor.white)
+                    context?.setFillColor(CGColor.init(gray: 1.0, alpha: 0.4))
+                }
+                for r in results {
+                    if let pred = r as? VNCoreMLFeatureValueObservation {
+                        print("\(pred.featureName), \(pred.featureValue.type.rawValue)")
+                        if pred.featureName == "var_944", let mvPred = pred.featureValue.multiArrayValue {
+                            let perItem = mvPred.shape[2].intValue
+                            let predThreshold = Float(0.3)
+                            guard mvPred.shape.count == 3 && mvPred.shape[0] == 1 && perItem == 7 else {
+                                print("mysterious shape: \(mvPred.shape)")
+                                continue
+                            }
+                            var anchorCandidates = [Anchor]()
+                            for a in 0 ..< mvPred.shape[1].intValue {
+                                let itemOffset = a * perItem
+                                let anchorConf = mvPred[itemOffset + 4].floatValue * mvPred[itemOffset + 5].floatValue
+                                if anchorConf > predThreshold {
+                                    let width = mvPred[itemOffset + 2].doubleValue / 640 * imageSize.width
+                                    let height = mvPred[itemOffset + 3].doubleValue / 640 * imageSize.height
+                                    
+                                    let x = mvPred[itemOffset].doubleValue / 640 * imageSize.width - width / 2 // cx -> xmin
+                                    let y = imageSize.height - mvPred[itemOffset + 1].doubleValue / 640 * imageSize.height - height / 2 // flip y, then cy -> ymin
+                                    print("[\(x), \(y), \(width), \(height)]: \(anchorConf)")
+                                    anchorCandidates.append(Anchor(rect: CGRect(x: x,
+                                                                                y: y, // flip?
+                                                                                width: width,
+                                                                                height: height),
+                                                                   confidence: anchorConf))
+                                    
+                                }
+                            }
+                            // NMS
+                            anchorCandidates.sort(by: > )
+                            let iouThreshold = 0.45
+                            for idx in 0 ..< anchorCandidates.count {
+                                let a = anchorCandidates[idx]
+                                if a.status == .dropped {
+                                    continue
+                                }
+                                for b in idx + 1 ..< anchorCandidates.count {
+                                    if a.iou(anchorCandidates[b]) > iouThreshold {
+                                        anchorCandidates[b].status = .dropped
+                                    }
+                                }
+                                anchorCandidates[idx].status = .accepted
+                            }
+                            
+                            for c in anchorCandidates.filter({ $0.status == .accepted }) {
+                                if let _ = cgImage {
+                                    context?.beginPath()
+                                    if c.confidence < 0.4 {
+                                        context?.setStrokeColor(.white)
+                                    } else if c.confidence < 0.6 {
+                                        context?.setStrokeColor(NSColor.yellow.cgColor)
+                                    } else {
+                                        context?.setStrokeColor(NSColor.green.cgColor)
+                                    }
+                                    context?.setLineWidth(c.confidence > 0.4 ? (c.confidence > 0.6 ? 3.0 : 2.0) : 1.0)
+                                    context?.addRect(c.rect)
+                                    context?.drawPath(using: .fillStroke)
+                                }
+                            }
+                        }
+                        /*
+                        if let mv = pred.featureValue.multiArrayValue {
+                            print("\(mv.shape)")
+                            print("\(mv)")
+                        }
+                         */
+                    }
+                }
+                if let _ = cgImage {
+                    
+                    if let newImage = context?.makeImage() {
+                        self.topImageView.image = NSImage(cgImage: newImage, size: imageSize)
+                    }
+                }
+                free(bytes)
+                
+            }
+            detectionRequest.imageCropAndScaleOption = .scaleFill
+            self.yoloRequest = detectionRequest
+        } else {
+            // Fallback on earlier versions
+            print("core ml not available")
+        }
+    }
+    
     func setUpDCGANLoader(key: String, file: URL) {
         self.name = "\(file.lastPathComponent)[\(key)]"
         loader = DCGANLoader(fileURL: file, key: key, perBatch: 50)
@@ -166,6 +310,9 @@ class ViewController: NSViewController {
             DispatchQueue.main.async {
                 self.bottomCollectionView!.reloadData()
             }
+        }
+        DispatchQueue.global().async {
+            self.setUpYolo()
         }
     }
     
@@ -783,6 +930,10 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                             }
                             // TODO: Show textual info and start a timer to hide afterwards
                             showTopInfo(attr)
+                            if let yoloRequest = self.yoloRequest {
+                                let handler = VNImageRequestHandler(url: cacheUrl)
+                                try? handler.perform([yoloRequest])
+                            }
                         }
                     }
                 } else {
@@ -810,6 +961,10 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                                 self.topImageView.animates = true
                             }
                             self.showTopInfo(attributes)
+                            if let yoloRequest = self.yoloRequest, let cacheUrl = cacheUrl {
+                                let handler = VNImageRequestHandler(url: cacheUrl)
+                                try? handler.perform([yoloRequest])
+                            }
                         }
                     default:
                         break
