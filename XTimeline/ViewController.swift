@@ -87,6 +87,7 @@ class ViewController: NSViewController {
     typealias ImageEntity = LoadableImageEntity
     override func viewDidLoad() {
         super.viewDidLoad()
+        topPlayerView.player = AVPlayer()
         let configuration = URLSessionConfiguration.default
         configuration.httpMaximumConnectionsPerHost = 4
         configuration.connectionProxyDictionary = [
@@ -1042,7 +1043,18 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         topPlayerView.isHidden = false
-                        topPlayerView.player = AVPlayer(url: cacheUrl)
+                        let item = AVPlayerItem(url: cacheUrl)
+                        let composition = AVMutableVideoComposition(propertiesOf: item.asset)
+                        composition.customVideoCompositorClass = DetectionObservationCompositor.self
+                        item.videoComposition = composition
+                        if let compositor = item.customVideoCompositor as? DetectionObservationCompositor {
+                            compositor.detectionModel = self.model ?? self.defaultModel
+                            if let name = self.selectedFeatureName {
+                                compositor.featureName = name
+                            }
+                        }
+                        topPlayerView.player?.replaceCurrentItem(with: item)
+                        
                         topPlayerView.player?.play()
                     } else {
                         topPlayerView.player?.pause()

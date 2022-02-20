@@ -22,6 +22,7 @@
 		DB1B9805216A502100A417AD /* RedditLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B9804216A502100A417AD /* RedditLoader.swift */; };
 		DB234094277D926700E02D67 /* RedditDB.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234093277D926700E02D67 /* RedditDB.swift */; };
 		DB234096277D92C600E02D67 /* RedditData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234095277D92C600E02D67 /* RedditData.swift */; };
+		DB5B4D3B27C2848E003BDA41 /* DetectionObservationCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB5B4D3A27C2848E003BDA41 /* DetectionObservationCompositor.swift */; };
 		DB5D22A2217C6249002B98CB /* OpenViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB5D22A1217C6249002B98CB /* OpenViewController.swift */; };
 		DB73587A22114F6900150E4C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB73587922114F6900150E4C /* AppDelegate.swift */; };
 		DB73587C22114F6900150E4C /* MasterViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB73587B22114F6900150E4C /* MasterViewController.swift */; };
@@ -95,6 +96,7 @@
 		DB1B9804216A502100A417AD /* RedditLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditLoader.swift; sourceTree = "<group>"; };
 		DB234093277D926700E02D67 /* RedditDB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditDB.swift; sourceTree = "<group>"; };
 		DB234095277D92C600E02D67 /* RedditData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditData.swift; sourceTree = "<group>"; };
+		DB5B4D3A27C2848E003BDA41 /* DetectionObservationCompositor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DetectionObservationCompositor.swift; sourceTree = "<group>"; };
 		DB5D22A1217C6249002B98CB /* OpenViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenViewController.swift; sourceTree = "<group>"; };
 		DB73587722114F6900150E4C /* XTimeline-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "XTimeline-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB73587922114F6900150E4C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -208,6 +210,7 @@
 				DB1B97D0216A3F9200A417AD /* AppDelegate.swift */,
 				DB1B97D2216A3F9200A417AD /* ViewController.swift */,
 				DB5D22A1217C6249002B98CB /* OpenViewController.swift */,
+				DB5B4D3A27C2848E003BDA41 /* DetectionObservationCompositor.swift */,
 				DB1B97FD216A403F00A417AD /* AbstractEntityAndLoader.swift */,
 				DB1B97FE216A403F00A417AD /* ThumbItem.swift */,
 				DB234098277D932D00E02D67 /* Loaders */,
@@ -535,6 +538,7 @@
 				DBF1B76E27AE7D0200128E1D /* best.mlmodel in Sources */,
 				DB1B97D1216A3F9200A417AD /* AppDelegate.swift in Sources */,
 				DB1B9805216A502100A417AD /* RedditLoader.swift in Sources */,
+				DB5B4D3B27C2848E003BDA41 /* DetectionObservationCompositor.swift in Sources */,
 				DBF1B77027AEF1C500128E1D /* PlainDirLoader.swift in Sources */,
 				DB1B9801216A403F00A417AD /* ThumbItem.swift in Sources */,
 				DB1B97FF216A403F00A417AD /* TwitterLoader.swift in Sources */,
