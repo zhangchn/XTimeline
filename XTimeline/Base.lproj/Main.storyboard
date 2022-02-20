@@ -89,6 +89,15 @@
                                                 </items>
                                             </menu>
                                         </menuItem>
+                                        <menuItem title="Load Model…" keyEquivalent="l" id="4GF-Uk-LOs">
+                                            <connections>
+                                                <action selector="loadModel:" target="Ady-hI-5gd" id="x3M-xJ-PPB"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Output Feature" enabled="NO" identifier="file-outfeature" id="be5-gU-EBA">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <menu key="submenu" title="Output Feature" systemMenu="recentDocuments" id="dZz-ls-UeW"/>
+                                        </menuItem>
                                         <menuItem isSeparatorItem="YES" id="m54-Is-iLE"/>
                                         <menuItem title="Close" keyEquivalent="w" id="DVo-aG-piG">
                                             <connections>
