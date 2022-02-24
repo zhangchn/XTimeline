@@ -1058,8 +1058,10 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                         topPlayerView.player?.replaceCurrentItem(with: item)
                         
                         topPlayerView.player?.play()
+                        showTopInfo(attr)
                     } else {
                         topPlayerView.player?.pause()
+                        topPlayerView.player?.replaceCurrentItem(with: nil)
                         topPlayerView.isHidden = true
                         if imageUrl.scheme == "npy", let img = attr["thumbnail"] as? NSImage {
                             topImageView.image = img
@@ -1104,6 +1106,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                         self.topUrl = cacheUrl
                         if let img = attributes["thumbnail"] as? NSImage {
                             self.topPlayerView.player?.pause()
+                            self.topPlayerView.player?.replaceCurrentItem(with: nil)
                             self.topPlayerView.isHidden = true
                             self.topImageView.image = img
                             if cacheUrl?.pathExtension == "gif" {
