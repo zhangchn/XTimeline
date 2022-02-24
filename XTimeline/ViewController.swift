@@ -79,6 +79,7 @@ class ViewController: NSViewController {
     @IBOutlet weak var topPlayerView: AVPlayerView!
     @IBOutlet weak var topInfoLabel: NSTextField!
     var topInfoLabelTimer: Timer?
+    var topUrl: URL?
     let itemId =  NSUserInterfaceItemIdentifier.init("thumb")
     
     typealias LoaderType = AbstractImageLoader
@@ -1041,6 +1042,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 
             case .image(let (imageUrl, cacheUrl, attr /*attributes*/)):
                 if let cacheUrl = cacheUrl {
+                    self.topUrl = cacheUrl
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         topPlayerView.isHidden = false
                         let item = AVPlayerItem(url: cacheUrl)
@@ -1069,7 +1071,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                             } else {
                                 let yoloRequest = self.yoloRequestBuilder(for: image) { result in
                                     DispatchQueue.main.async {
-                                        if let result = result {
+                                        if let result = result, self.topUrl == cacheUrl {
                                             self.topImageView.image = result
                                         }
                                     }
@@ -1099,6 +1101,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 if let e = self.loader?.loadCachedPlaceHolder(with: url, attributes: attr) {
                     switch e {
                     case .image(let (_, cacheUrl, attributes)):
+                        self.topUrl = cacheUrl
                         if let img = attributes["thumbnail"] as? NSImage {
                             self.topPlayerView.player?.pause()
                             self.topPlayerView.isHidden = true
@@ -1110,7 +1113,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                             } else if let cacheUrl = cacheUrl {
                                 let yoloRequest = self.yoloRequestBuilder(for: img) { result in
                                     DispatchQueue.main.async {
-                                        if let result = result {
+                                        if let result = result, self.topUrl == cacheUrl {
                                             self.topImageView.image = result
                                         }
                                     }
