@@ -145,32 +145,35 @@ class ViewController: NSViewController {
     
     var defaultModel: VNCoreMLModel!
     var model: VNCoreMLModel?
-    var outputDesc: [String:MLFeatureDescription]?
+    // var outputDesc: [String:MLFeatureDescription]?
     @IBAction func loadModel(_ sender: Any) {
         let openPanel = NSOpenPanel()
         openPanel.canChooseDirectories = true
         openPanel.allowedFileTypes = ["mlmodelc", "mlmodel"]
+        let appDelegate = NSApp.delegate as! AppDelegate
         openPanel.beginSheetModal(for: view.window!) { resp in
             if let url = openPanel.url {
+                var outputDesc: [String: MLFeatureDescription]?
                 if url.pathExtension == "mlmodel" {
                     do {
                         let compiledUrl = try MLModel.compileModel(at: url)
                         let yoloMLModel = try MLModel(contentsOf: compiledUrl)
-                        self.model = try VNCoreMLModel(for: yoloMLModel)
-                        self.outputDesc = yoloMLModel.modelDescription.outputDescriptionsByName
+                        appDelegate.model = try VNCoreMLModel(for: yoloMLModel)
+                        outputDesc = yoloMLModel.modelDescription.outputDescriptionsByName
                     } catch let e {
                         print(e)
                     }
                 } else if url.pathExtension == "mlmodelc" {
                     do {
                         let yoloMLModel = try MLModel(contentsOf: url)
-                        self.outputDesc = yoloMLModel.modelDescription.outputDescriptionsByName
-                        self.model = try VNCoreMLModel(for: yoloMLModel)
+                        outputDesc = yoloMLModel.modelDescription.outputDescriptionsByName
+                        appDelegate.model = try VNCoreMLModel(for: yoloMLModel)
                     } catch let e {
                         print(e)
                     }
                 }
-                if let outputDesc = self.outputDesc {
+                if let outputDesc = outputDesc {
+                    appDelegate.outputDesc = outputDesc
                     DispatchQueue.main.async {
                         // generate feature selection menus
                         let menuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Output Feature")
@@ -185,21 +188,22 @@ class ViewController: NSViewController {
                         }
                         if submenu.items.count == 1 {
                             submenu.items.first?.state = .on
-                            self.selectedFeatureName = submenu.items.first!.title
+                            appDelegate.selectedFeatureName = submenu.items.first!.title
+                            // self.selectedFeatureName = submenu.items.first!.title
                         }
                         menuItem?.submenu = submenu
                     }
                 }
-                self.setUpYolo()
+                // self.setUpYolo()
             }
         }
     }
-    var selectedFeatureName: String?
     
     @objc
     func didSelectFeature(_ sender: Any) {
         guard let sender = sender as? NSMenuItem else {return}
-        self.selectedFeatureName = sender.title
+        let appDelegate = NSApp.delegate as! AppDelegate
+        appDelegate.selectedFeatureName = sender.title
         if let submenu = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Output Feature")?.submenu {
             for item in submenu.items {
                 item.state = item == sender ? .on : .off
@@ -207,8 +211,12 @@ class ViewController: NSViewController {
         }
     }
     
-    func yoloRequestBuilder(for image: NSImage, completion: @escaping (NSImage?) -> Void) -> VNCoreMLRequest {
-        let detectionRequest = VNCoreMLRequest(model: self.model ?? self.defaultModel) { request, error in
+    func yoloRequestBuilder(for image: NSImage, completion: @escaping (NSImage?) -> Void) -> VNCoreMLRequest? {
+        let appDelegate = (NSApp.delegate as! AppDelegate)
+        guard let model = appDelegate.model ?? appDelegate.defaultModel else {
+            return nil
+        }
+        let detectionRequest = VNCoreMLRequest(model: model) { request, error in
             if let err = error {
                 print("detect error: \(err)")
                 return completion(nil)
@@ -229,6 +237,7 @@ class ViewController: NSViewController {
             context?.draw(cgImage, in: CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight))
             context?.setStrokeColor(CGColor.white)
             context?.setFillColor(CGColor.init(gray: 1.0, alpha: 0.4))
+            context?.setTextDrawingMode(.fill)
             
             for r in results {
                 if let pred = r as? VNCoreMLFeatureValueObservation {
@@ -237,18 +246,21 @@ class ViewController: NSViewController {
                     }
                     if let mvPred = pred.featureValue.multiArrayValue {
                         if #available(macOS 10.15, *) {
-                            guard pred.featureName == self.selectedFeatureName ?? "var_944" else {
+                            guard pred.featureName == appDelegate.selectedFeatureName ?? "var_944" else {
                                 continue
                             }
                         }
                         let itemSize = mvPred.shape[2].intValue
+                        let categoryCount = itemSize - 5
+
                         guard mvPred.shape.count == 3 && mvPred.shape[0] == 1 && itemSize >= 6 else {
                             print("mysterious shape: \(mvPred.shape)")
                             continue
                         }
                         let predThreshold = Float(0.3)
-                        var bboxCandidates = [BBox]()
+                        var bboxCandidates = [[BBox]](repeating: [], count: categoryCount)
                         let mvPredData = mvPred.dataPointer
+                        /*
                         for a in 0 ..< mvPred.shape[1].intValue {
                             let itemOffset = a * itemSize
                             let bboxConf = mvPredData.load(fromByteOffset: 4 * (itemOffset + 4), as: Float32.self) * mvPredData.load(fromByteOffset: 4 * (itemOffset + 5), as: Float32.self)
@@ -296,6 +308,63 @@ class ViewController: NSViewController {
                             context?.addRect(c.rect)
                             context?.drawPath(using: .fillStroke)
                             
+                        }*/
+                        // Calculate
+                        for a in 0 ..< mvPred.shape[1].intValue {
+                            let itemOffset = a * itemSize
+                            for categoryIdx in 0..<categoryCount {
+                                let objectness = mvPredData.load(fromByteOffset: 4 * (itemOffset + 4),
+                                                                 as: Float32.self)
+                                let categoryScore = mvPredData.load(fromByteOffset: 4 * (itemOffset + 5 + categoryIdx),
+                                                                    as: Float32.self)
+                                let bboxConf = objectness * categoryScore
+                                if bboxConf > predThreshold {
+                                    let width = mvPred[itemOffset + 2].doubleValue / 640 * CGFloat(imageWidth)
+                                    let height = mvPred[itemOffset + 3].doubleValue / 640 * CGFloat(imageHeight)
+                                    
+                                    let x = mvPred[itemOffset].doubleValue / 640 * CGFloat(imageWidth) - width / 2 // cx -> xmin
+                                    let y = (1.0 - mvPred[itemOffset + 1].doubleValue / 640) * CGFloat(imageHeight) - height / 2 // flip y, then cy -> ymin
+                                    //print("[\(x), \(y), \(width), \(height)]: \(bboxConf)")
+                                    bboxCandidates[categoryIdx].append(BBox(rect: CGRect(x: x,
+                                                                                             y: y, // flip?
+                                                                                             width: width,
+                                                                                             height: height),
+                                                                                confidence: Float(bboxConf)))
+                                    
+                                }
+                            }
+                        }
+                        // NMS
+                        for categoryIdx in 0..<(itemSize - 5) {
+                            bboxCandidates[categoryIdx].sort(by: > )
+                            let iouThreshold = 0.45
+                            for idx in 0 ..< bboxCandidates[categoryIdx].count {
+                                let a = bboxCandidates[categoryIdx][idx]
+                                if a.status == .dropped {
+                                    continue
+                                }
+                                for b in idx + 1 ..< bboxCandidates[categoryIdx].count {
+                                    if a.iou(bboxCandidates[categoryIdx][b]) > iouThreshold {
+                                        bboxCandidates[categoryIdx][b].status = .dropped
+                                    }
+                                }
+                                bboxCandidates[categoryIdx][idx].status = .accepted
+                            }
+                            
+                            
+                            for c in bboxCandidates[categoryIdx].filter({ $0.status == .accepted }) {
+                                
+                                context?.beginPath()
+                                let categoryFactor = CGFloat(categoryIdx) / (max(2.0, CGFloat(categoryCount)) - 1)
+                                context?.setStrokeColor(CGColor(red: categoryFactor, green: 0.0, blue: 1 - categoryFactor, alpha: 1.0))
+                                context?.setFillColor(CGColor(gray: 1.0, alpha: CGFloat(c.confidence) / 2.0))
+                                context?.setLineWidth(CGFloat(imageWidth) / 600 * 3.0)
+                                context?.addRect(c.rect)
+                                context?.drawPath(using: .fillStroke)
+                                
+                                print("NMS: category \(categoryIdx) [\(c.rect.origin.x), \(c.rect.origin.y), \(c.rect.size.width), \(c.rect.size.height)]: \(c.confidence)")
+                                
+                            }
                         }
                     }
                     /*
@@ -316,7 +385,7 @@ class ViewController: NSViewController {
         detectionRequest.imageCropAndScaleOption = .scaleFill
         return detectionRequest
     }
-    
+    /*
     func setUpYolo() {
         if #available(macOS 10.15, *) {
             guard let modelUrl = Bundle.main.url(forResource: "best", withExtension: "mlmodelc"), let yoloMLModel = try? MLModel(contentsOf: modelUrl), let defaultModel = try? VNCoreMLModel(for: yoloMLModel) else {
@@ -329,7 +398,7 @@ class ViewController: NSViewController {
             print("core ml not available")
         }
     }
-    
+    */
     func setUpDCGANLoader(key: String, file: URL) {
         self.name = "\(file.lastPathComponent)[\(key)]"
         loader = DCGANLoader(fileURL: file, key: key, perBatch: 50)
@@ -344,9 +413,11 @@ class ViewController: NSViewController {
     func setUpPlainDirLoader(_ url: URL) {
         self.name = "\(url.lastPathComponent)"
         loader = PlainDirLoader(fileUrl: url)
+        /*
         DispatchQueue.global().async {
             self.setUpYolo()
         }
+         */
         loader.loadFirstPage { entities in
             self.imageList = entities
             DispatchQueue.main.async {
@@ -401,9 +472,11 @@ class ViewController: NSViewController {
                 self.bottomCollectionView!.reloadData()
             }
         }
+        /*
         DispatchQueue.global().async {
             self.setUpYolo()
         }
+         */
     }
     
     func setUpTwitterMediaLoader(name: String) {
@@ -1038,6 +1111,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
      */
     func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
         if let indexPath = indexPaths.first {
+            let appDelegate = NSApp.delegate as! AppDelegate
             switch imageList[indexPath.item] {
                 
             case .image(let (imageUrl, cacheUrl, attr /*attributes*/)):
@@ -1046,13 +1120,16 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         topPlayerView.isHidden = false
                         let item = AVPlayerItem(url: cacheUrl)
-                        let composition = AVMutableVideoComposition(propertiesOf: item.asset)
-                        composition.customVideoCompositorClass = DetectionObservationCompositor.self
-                        item.videoComposition = composition
-                        if let compositor = item.customVideoCompositor as? DetectionObservationCompositor {
-                            compositor.detectionModel = self.model ?? self.defaultModel
-                            if let name = self.selectedFeatureName {
-                                compositor.featureName = name
+                        let appDelegate = (NSApp.delegate as! AppDelegate)
+                        if let model = appDelegate.model ?? appDelegate.defaultModel {
+                            let composition = AVMutableVideoComposition(propertiesOf: item.asset)
+                            composition.customVideoCompositorClass = DetectionObservationCompositor.self
+                            item.videoComposition = composition
+                            if let compositor = item.customVideoCompositor as? DetectionObservationCompositor {
+                                compositor.detectionModel = model
+                                if let name = appDelegate.selectedFeatureName {
+                                    compositor.featureName = name
+                                }
                             }
                         }
                         topPlayerView.player?.replaceCurrentItem(with: item)
@@ -1078,9 +1155,11 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                                         }
                                     }
                                 }
-                                let handler = VNImageRequestHandler(url: cacheUrl)
-                                DispatchQueue.global().async {
-                                    try? handler.perform([yoloRequest])
+                                if let yoloRequest = yoloRequest {
+                                    let handler = VNImageRequestHandler(url: cacheUrl)
+                                    DispatchQueue.global().async {
+                                        try? handler.perform([yoloRequest])
+                                    }
                                 }
                             }
                             // TODO: Show textual info and start a timer to hide afterwards
@@ -1121,9 +1200,11 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                                         }
                                     }
                                 }
-                                let handler = VNImageRequestHandler(url: cacheUrl)
-                                DispatchQueue.global().async {
-                                    try? handler.perform([yoloRequest])
+                                if let yoloRequest = yoloRequest {
+                                    let handler = VNImageRequestHandler(url: cacheUrl)
+                                    DispatchQueue.global().async {
+                                        try? handler.perform([yoloRequest])
+                                    }
                                 }
                             }
                             self.showTopInfo(attributes)

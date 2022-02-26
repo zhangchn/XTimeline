@@ -77,7 +77,7 @@ class DetectionObservationCompositor: NSObject {
                                         bitsPerComponent: 8,
                                         bytesPerRow: dstStride,
                                         space: CGColorSpace(name: CGColorSpace.sRGB)!,
-                                        bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)
+                                        bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue | CGImageByteOrderInfo.order32Little.rawValue)
                 context?.setStrokeColor(CGColor.white)
                 context?.setFillColor(CGColor.init(gray: 1.0, alpha: 0.4))
                 for r in results {
@@ -142,17 +142,13 @@ class DetectionObservationCompositor: NSObject {
                             for c in bboxCandidates[categoryIdx].filter({ $0.status == .accepted }) {
                                 
                                 context?.beginPath()
-                                if c.confidence < 0.4 {
-                                    context?.setStrokeColor(.white)
-                                } else if c.confidence < 0.6 {
-                                    context?.setStrokeColor(CGColor(red: 1.0, green: 1.0, blue: 0, alpha: 1.0))
-                                } else {
-                                    context?.setStrokeColor(CGColor(red: 0.0, green: 1.0, blue: 0, alpha: 1.0))
-                                }
-                                context?.setLineWidth(c.confidence > 0.4 ? (c.confidence > 0.6 ? 3.0 : 2.0) : 1.0)
+                                let categoryFactor = CGFloat(categoryIdx) / (max(2.0, CGFloat(categoryCount)) - 1)
+                                context?.setStrokeColor(CGColor(red: categoryFactor, green: 0.0, blue: 1 - categoryFactor, alpha: 1.0))
+                                context?.setFillColor(CGColor(gray: 1.0, alpha: CGFloat(c.confidence) / 2.0))
+
+                                context?.setLineWidth(CGFloat(srcWidth) / 600 * 3.0)
                                 context?.addRect(c.rect)
                                 context?.drawPath(using: .fillStroke)
-//                                context?.strokePath()
                                 
                                 if categoryIdx < categoryLabels.count {
                                     print("NMS: category \(categoryLabels[categoryIdx])(\(categoryIdx) [\(c.rect.origin.x), \(c.rect.origin.y), \(c.rect.size.width), \(c.rect.size.height)]: \(c.confidence)")
@@ -164,6 +160,7 @@ class DetectionObservationCompositor: NSObject {
                         
                     }
                 }
+                CVPixelBufferUnlockBaseAddress(dstFrame, [])
                 compositionRequest.finish(withComposedVideoFrame: dstFrame)
 
             }
@@ -217,7 +214,6 @@ extension DetectionObservationCompositor: AVVideoCompositing {
             self.requests.insert(detectionRequest)
             self.requestsSema.signal()
             CVPixelBufferUnlockBaseAddress(frame, .readOnly)
-            CVPixelBufferUnlockBaseAddress(dstBuf, [])
         }
     }
 }
