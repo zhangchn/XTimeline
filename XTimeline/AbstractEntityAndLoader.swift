@@ -25,9 +25,9 @@ protocol EntityType {
 }
 
 enum LoadableImageEntity: EntityType {
-    case image(URL, URL?, [String: Any]) // URL and cache file URL if exists
-    case placeHolder(URL, Bool, [String: Any])
-    case batchPlaceHolder(URL, Bool)
+    case image((URL, URL?, [String: Any])) // URL and cache file URL if exists
+    case placeHolder((URL, Bool, [String: Any]))
+    case batchPlaceHolder((URL, Bool))
 }
 
 class AbstractImageLoader: EntityLoader, EntityLoading {

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="14460.31" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
+<document type="com.apple.InterfaceBuilder3.Cocoa.Storyboard.XIB" version="3.0" toolsVersion="19529" targetRuntime="MacOSX.Cocoa" propertyAccessControl="none" useAutolayout="YES" initialViewController="B8D-0N-5wS">
     <dependencies>
         <deployment identifier="macosx"/>
-        <plugIn identifier="com.apple.AVKitIBPlugin" version="14460.31"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="14460.31"/>
+        <plugIn identifier="com.apple.AVKitIBPlugin" version="19529"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.CocoaPlugin" version="19529"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
     <scenes>
@@ -68,7 +68,12 @@
                                         </menuItem>
                                         <menuItem title="Open…" keyEquivalent="o" id="IAo-SY-fd9">
                                             <connections>
-                                                <action selector="openDocument:" target="Ady-hI-5gd" id="bVn-NM-KNZ"/>
+                                                <action selector="showOpenPanel:" target="Ady-hI-5gd" id="q01-fj-xwk"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Open Directory…" keyEquivalent="O" id="e7s-ox-fAD">
+                                            <connections>
+                                                <action selector="showOpenDirectoryPanel:" target="Ady-hI-5gd" id="veM-DF-GUQ"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem title="Open Recent" id="tXI-mr-wws">
@@ -83,6 +88,15 @@
                                                     </menuItem>
                                                 </items>
                                             </menu>
+                                        </menuItem>
+                                        <menuItem title="Load Model…" keyEquivalent="l" id="4GF-Uk-LOs">
+                                            <connections>
+                                                <action selector="loadModel:" target="Ady-hI-5gd" id="x3M-xJ-PPB"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Output Feature" enabled="NO" identifier="file-outfeature" id="be5-gU-EBA">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <menu key="submenu" title="Output Feature" systemMenu="recentDocuments" id="dZz-ls-UeW"/>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="m54-Is-iLE"/>
                                         <menuItem title="Close" keyEquivalent="w" id="DVo-aG-piG">
@@ -103,6 +117,26 @@
                                         <menuItem title="Reload" keyEquivalent="r" id="8wz-Ub-HhH">
                                             <connections>
                                                 <action selector="reload:" target="Ady-hI-5gd" id="Yf5-pY-gHX"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Fetch" keyEquivalent="F" id="5OD-iL-opE">
+                                            <connections>
+                                                <action selector="fetchPlaceholders:" target="Ady-hI-5gd" id="yAk-Az-EV6"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Load More" tag="102" keyEquivalent="l" id="5Ar-Am-mIB" userLabel="Load All">
+                                            <connections>
+                                                <action selector="loadOnce:" target="Ady-hI-5gd" id="1yZ-cZ-otb"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Load All" tag="100" keyEquivalent="A" id="b7P-gY-jL9" userLabel="Load All">
+                                            <connections>
+                                                <action selector="startLoadAll:" target="Ady-hI-5gd" id="UEE-Yz-ROP"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Stop Loading" tag="101" hidden="YES" keyEquivalent="S" id="Ihi-cE-HCi" userLabel="Stop loading">
+                                            <connections>
+                                                <action selector="stopLoading:" target="Ady-hI-5gd" id="MLf-go-a0b"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="aJh-i4-bef"/>
@@ -621,7 +655,7 @@
                                         <menuItem title="Show Sidebar" keyEquivalent="s" id="kIP-vf-haE">
                                             <modifierMask key="keyEquivalentModifierMask" control="YES" command="YES"/>
                                             <connections>
-                                                <action selector="toggleSourceList:" target="Ady-hI-5gd" id="iwa-gc-5KM"/>
+                                                <action selector="toggleSidebar:" target="Ady-hI-5gd" id="iwa-gc-5KM"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem title="Enter Full Screen" keyEquivalent="f" id="4J7-dP-txa">
@@ -701,7 +735,7 @@
                 </windowController>
                 <customObject id="Oky-zY-oP4" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="75" y="250"/>
+            <point key="canvasLocation" x="94" y="450"/>
         </scene>
         <!--Open View Controller-->
         <scene sceneID="gfA-Th-9d9">
@@ -712,7 +746,7 @@
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
                             <textField verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="mKg-RX-tuH">
-                                <rect key="frame" x="184" y="63" width="117" height="22"/>
+                                <rect key="frame" x="189" y="65" width="107" height="21"/>
                                 <textFieldCell key="cell" scrollable="YES" lineBreakMode="clipping" selectable="YES" editable="YES" sendsActionOnEndEditing="YES" borderStyle="bezel" drawsBackground="YES" id="N1M-u0-dD8">
                                     <font key="font" usesAppearanceFont="YES"/>
                                     <color key="textColor" name="controlTextColor" catalog="System" colorSpace="catalog"/>
@@ -723,20 +757,21 @@
                                 </connections>
                             </textField>
                             <popUpButton verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="Pm9-xg-xaC">
-                                <rect key="frame" x="28" y="60" width="116" height="26"/>
+                                <rect key="frame" x="27" y="61" width="123" height="24"/>
                                 <popUpButtonCell key="cell" type="push" title="Reddit" bezelStyle="rounded" alignment="left" lineBreakMode="truncatingTail" state="on" borderStyle="borderAndBezel" imageScaling="proportionallyDown" inset="2" selectedItem="cgT-so-3jC" id="LRX-fO-1qm">
                                     <behavior key="behavior" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="menu"/>
                                     <menu key="menu" id="H40-t5-yge">
                                         <items>
                                             <menuItem title="Reddit" state="on" id="cgT-so-3jC"/>
-                                            <menuItem title="TwitterMedia" id="pJs-2o-CCO"/>
+                                            <menuItem title="Reddit Offline" id="hsI-H9-QZo"/>
+                                            <menuItem title="DCGAN" id="pJs-2o-CCO"/>
                                         </items>
                                     </menu>
                                 </popUpButtonCell>
                             </popUpButton>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="kPQ-d7-UXH">
-                                <rect key="frame" x="385" y="56" width="82" height="32"/>
+                                <rect key="frame" x="392" y="57" width="76" height="32"/>
                                 <buttonCell key="cell" type="push" title="Open" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="F2e-fP-U0N">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -749,7 +784,7 @@ DQ
                                 </connections>
                             </button>
                             <button verticalHuggingPriority="750" translatesAutoresizingMaskIntoConstraints="NO" id="HnX-De-gKV">
-                                <rect key="frame" x="385" y="23" width="82" height="32"/>
+                                <rect key="frame" x="392" y="25" width="76" height="32"/>
                                 <buttonCell key="cell" type="push" title="Cancel" bezelStyle="rounded" alignment="center" borderStyle="border" imageScaling="proportionallyDown" inset="2" id="87v-mP-K9i">
                                     <behavior key="behavior" pushIn="YES" lightByBackground="YES" lightByGray="YES"/>
                                     <font key="font" metaFont="system"/>
@@ -797,12 +832,12 @@ Gw
                             <splitView arrangesAllSubviews="NO" dividerStyle="paneSplitter" translatesAutoresizingMaskIntoConstraints="NO" id="x4q-Ma-EFC">
                                 <rect key="frame" x="0.0" y="0.0" width="480" height="270"/>
                                 <subviews>
-                                    <customView fixedFrame="YES" id="Xkg-b8-xpv">
-                                        <rect key="frame" x="0.0" y="0.0" width="480" height="199"/>
-                                        <autoresizingMask key="autoresizingMask"/>
+                                    <customView id="Xkg-b8-xpv">
+                                        <rect key="frame" x="0.0" y="0.0" width="480" height="182"/>
+                                        <autoresizingMask key="autoresizingMask" flexibleMaxY="YES"/>
                                         <subviews>
                                             <imageView horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="f3u-vm-2cE">
-                                                <rect key="frame" x="0.0" y="0.0" width="480" height="199"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="480" height="182"/>
                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                 <imageCell key="cell" refusesFirstResponder="YES" alignment="left" imageScaling="proportionallyDown" id="UfD-vq-Sd1"/>
                                                 <connections>
@@ -810,27 +845,40 @@ Gw
                                                 </connections>
                                             </imageView>
                                             <customView autoresizesSubviews="NO" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="yc1-U9-Ivh">
-                                                <rect key="frame" x="228" y="88" width="24" height="24"/>
+                                                <rect key="frame" x="228" y="71" width="24" height="24"/>
                                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                             </customView>
                                             <avPlayerView hidden="YES" fixedFrame="YES" controlsStyle="inline" translatesAutoresizingMaskIntoConstraints="NO" id="qHZ-sX-0Yw">
-                                                <rect key="frame" x="0.0" y="0.0" width="480" height="199"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="480" height="182"/>
                                                 <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                             </avPlayerView>
+                                            <textField hidden="YES" horizontalHuggingPriority="251" verticalHuggingPriority="750" horizontalCompressionResistancePriority="250" textCompletion="NO" translatesAutoresizingMaskIntoConstraints="NO" id="oft-jX-I2l">
+                                                <rect key="frame" x="0.0" y="163" width="480" height="19"/>
+                                                <textFieldCell key="cell" title="Textual Info" drawsBackground="YES" id="Xkh-r0-hGB">
+                                                    <font key="font" metaFont="system" size="16"/>
+                                                    <color key="textColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                                    <color key="backgroundColor" red="0.0" green="0.0" blue="0.0" alpha="0.28620206993930392" colorSpace="custom" customColorSpace="sRGB"/>
+                                                </textFieldCell>
+                                            </textField>
                                         </subviews>
+                                        <constraints>
+                                            <constraint firstItem="oft-jX-I2l" firstAttribute="leading" secondItem="Xkg-b8-xpv" secondAttribute="leading" id="Bat-dm-whZ"/>
+                                            <constraint firstItem="oft-jX-I2l" firstAttribute="top" secondItem="Xkg-b8-xpv" secondAttribute="top" id="Y3T-IM-sJg"/>
+                                            <constraint firstAttribute="trailing" secondItem="oft-jX-I2l" secondAttribute="trailing" priority="600" id="cjB-Us-Ofr"/>
+                                        </constraints>
                                     </customView>
                                     <customView id="L2u-ro-Ty9">
-                                        <rect key="frame" x="0.0" y="209" width="480" height="61"/>
+                                        <rect key="frame" x="0.0" y="192" width="480" height="78"/>
                                         <autoresizingMask key="autoresizingMask" flexibleMinY="YES"/>
                                         <subviews>
                                             <scrollView wantsLayer="YES" horizontalLineScroll="10" horizontalPageScroll="10" verticalLineScroll="10" verticalPageScroll="10" hasVerticalScroller="NO" usesPredominantAxisScrolling="NO" translatesAutoresizingMaskIntoConstraints="NO" id="99p-GE-9TI">
-                                                <rect key="frame" x="0.0" y="0.0" width="480" height="61"/>
-                                                <clipView key="contentView" drawsBackground="NO" id="Qy1-Ep-LfD">
-                                                    <rect key="frame" x="1" y="1" width="478" height="48"/>
+                                                <rect key="frame" x="0.0" y="0.0" width="480" height="78"/>
+                                                <clipView key="contentView" id="Qy1-Ep-LfD">
+                                                    <rect key="frame" x="1" y="1" width="478" height="76"/>
                                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                                     <subviews>
-                                                        <collectionView id="JIW-Ve-fUP">
-                                                            <rect key="frame" x="0.0" y="0.0" width="478" height="48"/>
+                                                        <collectionView selectable="YES" allowsMultipleSelection="YES" id="JIW-Ve-fUP">
+                                                            <rect key="frame" x="0.0" y="0.0" width="478" height="76"/>
                                                             <autoresizingMask key="autoresizingMask" heightSizable="YES"/>
                                                             <collectionViewFlowLayout key="collectionViewLayout" minimumInteritemSpacing="10" scrollDirection="horizontal" id="hMN-Qi-QwB">
                                                                 <size key="itemSize" width="50" height="44"/>
@@ -844,11 +892,11 @@ Gw
                                                     </subviews>
                                                     <edgeInsets key="contentInsets" left="0.0" right="0.0" top="0.0" bottom="0.0"/>
                                                 </clipView>
-                                                <scroller key="horizontalScroller" verticalHuggingPriority="750" controlSize="mini" horizontal="YES" id="rRf-M8-smV">
-                                                    <rect key="frame" x="1" y="49" width="478" height="11"/>
+                                                <scroller key="horizontalScroller" wantsLayer="YES" verticalHuggingPriority="750" controlSize="mini" horizontal="YES" id="rRf-M8-smV">
+                                                    <rect key="frame" x="1" y="63" width="478" height="14"/>
                                                     <autoresizingMask key="autoresizingMask"/>
                                                 </scroller>
-                                                <scroller key="verticalScroller" hidden="YES" verticalHuggingPriority="750" horizontal="NO" id="5lU-4J-Qld">
+                                                <scroller key="verticalScroller" hidden="YES" wantsLayer="YES" verticalHuggingPriority="750" horizontal="NO" id="5lU-4J-Qld">
                                                     <rect key="frame" x="-100" y="-100" width="15" height="48"/>
                                                     <autoresizingMask key="autoresizingMask"/>
                                                 </scroller>
@@ -862,9 +910,12 @@ Gw
                                         </constraints>
                                     </customView>
                                 </subviews>
+                                <constraints>
+                                    <constraint firstItem="Xkg-b8-xpv" firstAttribute="height" secondItem="x4q-Ma-EFC" secondAttribute="height" multiplier="0.674074" id="Ly9-ed-rsY"/>
+                                </constraints>
                                 <holdingPriorities>
                                     <real value="250"/>
-                                    <real value="250"/>
+                                    <real value="430"/>
                                 </holdingPriorities>
                                 <connections>
                                     <outlet property="delegate" destination="PaO-Cc-a9k" id="Eoh-pX-QzC"/>
@@ -882,6 +933,7 @@ Gw
                         <outlet property="bottomCollectionView" destination="JIW-Ve-fUP" id="eOk-sB-bOw"/>
                         <outlet property="selectionRectangle" destination="yc1-U9-Ivh" id="eBk-mT-yM0"/>
                         <outlet property="topImageView" destination="f3u-vm-2cE" id="skG-1h-EMz"/>
+                        <outlet property="topInfoLabel" destination="oft-jX-I2l" id="9Ef-lz-iNH"/>
                         <outlet property="topPlayerView" destination="qHZ-sX-0Yw" id="iLH-uu-BJ4"/>
                     </connections>
                 </viewController>

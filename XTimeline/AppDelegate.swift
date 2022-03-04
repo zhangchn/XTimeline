@@ -7,20 +7,37 @@
 //
 
 import Cocoa
+import Vision
 
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
 
 
+    var defaultModel: VNCoreMLModel!
+    var model: VNCoreMLModel?
+    var outputDesc: [String:MLFeatureDescription]?
+    var selectedFeatureName: String? = "var_944"
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Insert code here to initialize your application
+        setUpYolo()
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
     }
 
-
+    func setUpYolo() {
+        if #available(macOS 10.15, *) {
+            guard let modelUrl = Bundle.main.url(forResource: "best", withExtension: "mlmodelc"), let yoloMLModel = try? MLModel(contentsOf: modelUrl), let defaultModel = try? VNCoreMLModel(for: yoloMLModel) else {
+                print("model failed")
+                return
+            }
+            self.defaultModel = defaultModel
+        } else {
+            // Fallback on earlier versions
+            print("core ml not available")
+        }
+    }
 }
 

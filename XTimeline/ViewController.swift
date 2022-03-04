@@ -9,6 +9,37 @@
 import Cocoa
 import AVFoundation
 import AVKit
+import Vision
+
+enum NMSStatus {
+    case notDetermined
+    case accepted
+    case dropped
+}
+
+struct BBox : Comparable {
+    static func < (lhs: BBox, rhs: BBox) -> Bool {
+        return lhs.confidence < rhs.confidence
+    }
+    
+    static func iou(_ lhs: BBox, _ rhs: BBox) -> CGFloat {
+        let intersection = NSIntersectionRect(NSRectFromCGRect(lhs.rect), NSRectFromCGRect(rhs.rect))
+        let union = NSUnionRect(NSRectFromCGRect(lhs.rect), NSRectFromCGRect(rhs.rect))
+        return intersection.width * intersection.height / union.width / union.height
+    }
+    
+    let rect: CGRect
+    let confidence: Float
+    var status: NMSStatus
+    init(rect: CGRect, confidence: Float) {
+        self.rect = rect
+        self.confidence = confidence
+        self.status = .notDetermined
+    }
+    func iou(_ another: BBox) -> CGFloat {
+        return BBox.iou(self, another)
+    }
+}
 
 func min(_ a: CGPoint, _ b: CGPoint) -> CGPoint {
     return CGPoint(x: min(a.x, b.x), y: min(a.y, b.y))
@@ -36,24 +67,38 @@ class ViewController: NSViewController {
         }
     }
     var imageList : [ImageEntity] = []
-    var cacheFunc: ((URL) -> URL?)!
+    var loadingItemCount = 0 {
+        didSet {
+            self.view.window?.title = "[" + (loadingItemCount == 0 ? "" : "\(loadingItemCount)/") + "\(imageList.count)" + "] " + name
+        }
+    }
+    //var cacheFunc: ((URL) -> URL?)!
     //@IBOutlet weak var topScrollView: NSScrollView!
     @IBOutlet weak var bottomCollectionView: NSCollectionView!
     @IBOutlet weak var topImageView: NSImageView!
     @IBOutlet weak var topPlayerView: AVPlayerView!
+    @IBOutlet weak var topInfoLabel: NSTextField!
+    var topInfoLabelTimer: Timer?
+    var topUrl: URL?
     let itemId =  NSUserInterfaceItemIdentifier.init("thumb")
     
     typealias LoaderType = AbstractImageLoader
     var loader: LoaderType!
+    var itemReloadObserver: AnyObject?
     typealias ImageEntity = LoadableImageEntity
     override func viewDidLoad() {
         super.viewDidLoad()
+        topPlayerView.player = AVPlayer()
         let configuration = URLSessionConfiguration.default
-        configuration.httpMaximumConnectionsPerHost = 3
+        configuration.httpMaximumConnectionsPerHost = 4
         configuration.connectionProxyDictionary = [
-            kCFNetworkProxiesSOCKSProxy : "127.0.0.1",
-            kCFNetworkProxiesSOCKSPort: 1080,
-            kCFNetworkProxiesSOCKSEnable: true,
+            kCFStreamPropertyHTTPSProxyHost: "127.0.0.1",
+            kCFStreamPropertyHTTPSProxyPort: 8118,
+            kCFStreamPropertyHTTPProxyHost: "127.0.0.1",
+            kCFStreamPropertyHTTPProxyPort: 8118,
+//            kCFNetworkProxiesSOCKSProxy : "127.0.0.1",
+//            kCFNetworkProxiesSOCKSPort: 1080,
+//            kCFNetworkProxiesSOCKSEnable: true,
         ]
         configuration.httpAdditionalHeaders = [
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:66.0) Gecko/20100101 Firefox/66.0"
@@ -61,30 +106,340 @@ class ViewController: NSViewController {
 
         session = URLSession(configuration: configuration)
         
-        //selectionRectangle.isHidden = true
-        selectionRectangle.wantsLayer = true
+        selectionRectangle.isHidden = true
+        //selectionRectangle.wantsLayer = true
         selectionRectangle.layer?.borderColor = NSColor.white.withAlphaComponent(0.7).cgColor
         selectionRectangle.layer?.borderWidth = 2
         bottomCollectionView.register(ThumbnailItem.self, forItemWithIdentifier: itemId)
         
         bottomCollectionView.allowsMultipleSelection = false
         bottomCollectionView.isSelectable = true
+        bottomCollectionView.delegate = self
         
+        let doubleClick = NSClickGestureRecognizer(target: self, action: #selector(reshowTopInfo))
+        doubleClick.numberOfClicksRequired = 2
+        topImageView.addGestureRecognizer(doubleClick)
+        
+        // dragging
+        bottomCollectionView.setDraggingSourceOperationMask([.copy, .delete], forLocal: false)
+        
+        // double click
+        itemReloadObserver = NotificationCenter.default.addObserver(forName: ThumbnailItem.reloadItem, object: nil, queue: .main) { [weak self] note in
+            if let self = self, let thumbItem = note.object as? ThumbnailItem {
+                if let indexPath = self.bottomCollectionView.indexPath(for: thumbItem) {
+                    let item = self.imageList[indexPath.item]
+                        
+                    switch item {
+                    case .placeHolder(let t1):
+                        self.imageList[indexPath.item] = .placeHolder((t1.0, false, t1.2))
+                    case .batchPlaceHolder(let t2):
+                        self.imageList[indexPath.item] = .batchPlaceHolder((t2.0, false))
+                    default:
+                        break
+                    }
+                    self.bottomCollectionView.reloadItems(at: [indexPath])
+                }
+            }
+        }
     }
+    
+    var defaultModel: VNCoreMLModel!
+    var model: VNCoreMLModel?
+    // var outputDesc: [String:MLFeatureDescription]?
+    @IBAction func loadModel(_ sender: Any) {
+        let openPanel = NSOpenPanel()
+        openPanel.canChooseDirectories = true
+        openPanel.allowedFileTypes = ["mlmodelc", "mlmodel"]
+        let appDelegate = NSApp.delegate as! AppDelegate
+        openPanel.beginSheetModal(for: view.window!) { resp in
+            if let url = openPanel.url {
+                var outputDesc: [String: MLFeatureDescription]?
+                if url.pathExtension == "mlmodel" {
+                    do {
+                        let compiledUrl = try MLModel.compileModel(at: url)
+                        let yoloMLModel = try MLModel(contentsOf: compiledUrl)
+                        appDelegate.model = try VNCoreMLModel(for: yoloMLModel)
+                        outputDesc = yoloMLModel.modelDescription.outputDescriptionsByName
+                    } catch let e {
+                        print(e)
+                    }
+                } else if url.pathExtension == "mlmodelc" {
+                    do {
+                        let yoloMLModel = try MLModel(contentsOf: url)
+                        outputDesc = yoloMLModel.modelDescription.outputDescriptionsByName
+                        appDelegate.model = try VNCoreMLModel(for: yoloMLModel)
+                    } catch let e {
+                        print(e)
+                    }
+                }
+                if let outputDesc = outputDesc {
+                    appDelegate.outputDesc = outputDesc
+                    DispatchQueue.main.async {
+                        // generate feature selection menus
+                        let menuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Output Feature")
+                        menuItem?.isEnabled = !outputDesc.isEmpty
+                        let submenu = NSMenu()
+                        
+                        for (key, _) in outputDesc {
+                            print("feature key: \(key)")
+                            let subItem = NSMenuItem(title: key, action: #selector(self.didSelectFeature(_:)), keyEquivalent: "")
+                            submenu.addItem(subItem)
+                            subItem.target = self
+                        }
+                        if submenu.items.count == 1 {
+                            submenu.items.first?.state = .on
+                            appDelegate.selectedFeatureName = submenu.items.first!.title
+                            // self.selectedFeatureName = submenu.items.first!.title
+                        }
+                        menuItem?.submenu = submenu
+                    }
+                }
+                // self.setUpYolo()
+            }
+        }
+    }
+    
+    @objc
+    func didSelectFeature(_ sender: Any) {
+        guard let sender = sender as? NSMenuItem else {return}
+        let appDelegate = NSApp.delegate as! AppDelegate
+        appDelegate.selectedFeatureName = sender.title
+        if let submenu = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Output Feature")?.submenu {
+            for item in submenu.items {
+                item.state = item == sender ? .on : .off
+            }
+        }
+    }
+    
+    func yoloRequestBuilder(for image: NSImage, completion: @escaping (NSImage?) -> Void) -> VNCoreMLRequest? {
+        let appDelegate = (NSApp.delegate as! AppDelegate)
+        guard let model = appDelegate.model ?? appDelegate.defaultModel else {
+            return nil
+        }
+        let detectionRequest = VNCoreMLRequest(model: model) { request, error in
+            if let err = error {
+                print("detect error: \(err)")
+                return completion(nil)
+            }
+            guard let results = request.results else {
+                print("no results")
+                return completion(nil)
+            }
+            guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                return completion(nil)
+            }
+            let imageWidth = cgImage.width
+            let imageHeight = cgImage.height
+            
+            let bytes = malloc(imageWidth * imageHeight * 4)
+            let context = CGContext(data: bytes, width: imageWidth, height: imageHeight, bitsPerComponent: 8, bytesPerRow: imageWidth * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)
+            
+            context?.draw(cgImage, in: CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight))
+            context?.setStrokeColor(CGColor.white)
+            context?.setFillColor(CGColor.init(gray: 1.0, alpha: 0.4))
+            context?.setTextDrawingMode(.fill)
+            
+            for r in results {
+                if let pred = r as? VNCoreMLFeatureValueObservation {
+                    if #available(macOS 10.15, *) {
+                        print("\(pred.featureName), \(pred.featureValue.type.rawValue)")
+                    }
+                    if let mvPred = pred.featureValue.multiArrayValue {
+                        if #available(macOS 10.15, *) {
+                            guard pred.featureName == appDelegate.selectedFeatureName ?? "var_944" else {
+                                continue
+                            }
+                        }
+                        let itemSize = mvPred.shape[2].intValue
+                        let categoryCount = itemSize - 5
 
-    func setUpRedditLoader(name: String) {
+                        guard mvPred.shape.count == 3 && mvPred.shape[0] == 1 && itemSize >= 6 else {
+                            print("mysterious shape: \(mvPred.shape)")
+                            continue
+                        }
+                        let predThreshold = Float(0.3)
+                        var bboxCandidates = [[BBox]](repeating: [], count: categoryCount)
+                        let mvPredData = mvPred.dataPointer
+                        /*
+                        for a in 0 ..< mvPred.shape[1].intValue {
+                            let itemOffset = a * itemSize
+                            let bboxConf = mvPredData.load(fromByteOffset: 4 * (itemOffset + 4), as: Float32.self) * mvPredData.load(fromByteOffset: 4 * (itemOffset + 5), as: Float32.self)
+                            if bboxConf > predThreshold {
+                                let width = CGFloat(mvPredData.load(fromByteOffset: 4 * (itemOffset + 2), as: Float32.self)) / 640 * CGFloat(imageWidth)
+                                let height = CGFloat(mvPredData.load(fromByteOffset: 4 * (itemOffset + 3), as: Float32.self)) / 640 * CGFloat(imageHeight)
+                                
+                                let x = CGFloat(mvPredData.load(fromByteOffset: 4 * (itemOffset), as: Float32.self)) / 640 * CGFloat(imageWidth) - width / 2 // cx -> xmin
+                                let y = (1.0 - CGFloat(mvPredData.load(fromByteOffset: 4 * (itemOffset + 1), as: Float32.self)) / 640) * CGFloat(imageHeight) - height / 2 // flip y, then cy -> ymin
+                                // print("[\(x), \(y), \(width), \(height)]: \(bboxConf)")
+                                bboxCandidates.append(BBox(rect: CGRect(x: x,
+                                                                        y: y, // flip?
+                                                                        width: width,
+                                                                        height: height),
+                                                           confidence: bboxConf))
+                                
+                            }
+                        }
+                        // NMS
+                        bboxCandidates.sort(by: > )
+                        let iouThreshold = 0.45
+                        for idx in 0 ..< bboxCandidates.count {
+                            let a = bboxCandidates[idx]
+                            if a.status == .dropped {
+                                continue
+                            }
+                            for b in idx + 1 ..< bboxCandidates.count {
+                                if a.iou(bboxCandidates[b]) > iouThreshold {
+                                    bboxCandidates[b].status = .dropped
+                                }
+                            }
+                            bboxCandidates[idx].status = .accepted
+                        }
+                        
+                        for c in bboxCandidates.filter({ $0.status == .accepted }) {
+                            context?.beginPath()
+                            if c.confidence < 0.4 {
+                                context?.setStrokeColor(.white)
+                            } else if c.confidence < 0.6 {
+                                context?.setStrokeColor(NSColor.yellow.cgColor)
+                            } else {
+                                context?.setStrokeColor(NSColor.green.cgColor)
+                            }
+                            context?.setLineWidth(c.confidence > 0.4 ? (c.confidence > 0.6 ? 3.0 : 2.0) : 1.0)
+                            context?.addRect(c.rect)
+                            context?.drawPath(using: .fillStroke)
+                            
+                        }*/
+                        // Calculate
+                        for a in 0 ..< mvPred.shape[1].intValue {
+                            let itemOffset = a * itemSize
+                            for categoryIdx in 0..<categoryCount {
+                                let objectness = mvPredData.load(fromByteOffset: 4 * (itemOffset + 4),
+                                                                 as: Float32.self)
+                                let categoryScore = mvPredData.load(fromByteOffset: 4 * (itemOffset + 5 + categoryIdx),
+                                                                    as: Float32.self)
+                                let bboxConf = objectness * categoryScore
+                                if bboxConf > predThreshold {
+                                    let width = mvPred[itemOffset + 2].doubleValue / 640 * CGFloat(imageWidth)
+                                    let height = mvPred[itemOffset + 3].doubleValue / 640 * CGFloat(imageHeight)
+                                    
+                                    let x = mvPred[itemOffset].doubleValue / 640 * CGFloat(imageWidth) - width / 2 // cx -> xmin
+                                    let y = (1.0 - mvPred[itemOffset + 1].doubleValue / 640) * CGFloat(imageHeight) - height / 2 // flip y, then cy -> ymin
+                                    //print("[\(x), \(y), \(width), \(height)]: \(bboxConf)")
+                                    bboxCandidates[categoryIdx].append(BBox(rect: CGRect(x: x,
+                                                                                             y: y, // flip?
+                                                                                             width: width,
+                                                                                             height: height),
+                                                                                confidence: Float(bboxConf)))
+                                    
+                                }
+                            }
+                        }
+                        // NMS
+                        for categoryIdx in 0..<(itemSize - 5) {
+                            bboxCandidates[categoryIdx].sort(by: > )
+                            let iouThreshold = 0.45
+                            for idx in 0 ..< bboxCandidates[categoryIdx].count {
+                                let a = bboxCandidates[categoryIdx][idx]
+                                if a.status == .dropped {
+                                    continue
+                                }
+                                for b in idx + 1 ..< bboxCandidates[categoryIdx].count {
+                                    if a.iou(bboxCandidates[categoryIdx][b]) > iouThreshold {
+                                        bboxCandidates[categoryIdx][b].status = .dropped
+                                    }
+                                }
+                                bboxCandidates[categoryIdx][idx].status = .accepted
+                            }
+                            
+                            
+                            for c in bboxCandidates[categoryIdx].filter({ $0.status == .accepted }) {
+                                
+                                context?.beginPath()
+                                let categoryFactor = CGFloat(categoryIdx) / (max(2.0, CGFloat(categoryCount)) - 1)
+                                context?.setStrokeColor(CGColor(red: categoryFactor, green: 0.0, blue: 1 - categoryFactor, alpha: 1.0))
+                                context?.setFillColor(CGColor(gray: 1.0, alpha: CGFloat(c.confidence) / 2.0))
+                                context?.setLineWidth(CGFloat(imageWidth) / 600 * 3.0)
+                                context?.addRect(c.rect)
+                                context?.drawPath(using: .fillStroke)
+                                
+                                print("NMS: category \(categoryIdx) [\(c.rect.origin.x), \(c.rect.origin.y), \(c.rect.size.width), \(c.rect.size.height)]: \(c.confidence)")
+                                
+                            }
+                        }
+                    }
+                    /*
+                    if let mv = pred.featureValue.multiArrayValue {
+                        print("\(mv.shape)")
+                        print("\(mv)")
+                    }
+                     */
+                }
+            }
+            if let newImage = context?.makeImage() {
+                completion(NSImage(cgImage: newImage, size: CGSize(width: imageWidth, height: imageHeight)))
+            } else {
+                completion(nil)
+            }
+            free(bytes)
+        }
+        detectionRequest.imageCropAndScaleOption = .scaleFill
+        return detectionRequest
+    }
+    /*
+    func setUpYolo() {
+        if #available(macOS 10.15, *) {
+            guard let modelUrl = Bundle.main.url(forResource: "best", withExtension: "mlmodelc"), let yoloMLModel = try? MLModel(contentsOf: modelUrl), let defaultModel = try? VNCoreMLModel(for: yoloMLModel) else {
+                print("model failed")
+                return
+            }
+            self.defaultModel = defaultModel
+        } else {
+            // Fallback on earlier versions
+            print("core ml not available")
+        }
+    }
+    */
+    func setUpDCGANLoader(key: String, file: URL) {
+        self.name = "\(file.lastPathComponent)[\(key)]"
+        loader = DCGANLoader(fileURL: file, key: key, perBatch: 50)
+        loader.loadFirstPage { entities in
+            self.imageList = entities
+            DispatchQueue.main.async {
+                self.bottomCollectionView.reloadData()
+            }
+        }
+    }
+    
+    func setUpPlainDirLoader(_ url: URL) {
+        self.name = "\(url.lastPathComponent)"
+        loader = PlainDirLoader(fileUrl: url)
+        /*
+        DispatchQueue.global().async {
+            self.setUpYolo()
+        }
+         */
+        loader.loadFirstPage { entities in
+            self.imageList = entities
+            DispatchQueue.main.async {
+                self.bottomCollectionView.reloadData()
+            }
+        }
+    }
+    
+    func setUpRedditLoader(name: String, offline: Bool = false) {
         self.name = name
         self.view.window?.title = name
         let fm = FileManager.default
-        let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+        let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         var created = fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name)
-        var external = created
+        let external = created
         if !created {
             let dest = downloadPath + "/reddit/.external/" + name
             do {
                 try fm.createDirectory(atPath: dest, withIntermediateDirectories: false, attributes: nil)
+                try fm.createDirectory(atPath: dest + "/.json", withIntermediateDirectories: false, attributes: nil)
                 created = true
-                external = true
+                _ = RedditLoader.existingSubreddits.insert(name)
             } catch _ {
                 
             }
@@ -94,6 +449,8 @@ class ViewController: NSViewController {
             if !fm.fileExists(atPath: path) {
                 do {
                     try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+                    _ = RedditLoader.existingSubreddits.insert(name)
+                    try fm.createDirectory(atPath: path + "/.json", withIntermediateDirectories: false, attributes: nil)
                 } catch let err {
                     let alert = NSAlert(error: err)
                     alert.beginSheetModal(for: self.view.window!) { (resp) in
@@ -104,20 +461,29 @@ class ViewController: NSViewController {
                 }
             }
         }
-        loader = RedditLoader(name: name, session: session, external: external)
+        if offline {
+            loader = OfflineRedditLoader(name: name, session: session, external: external)
+        } else {
+            loader = RedditLoader(name: name, session: session, external: external)
+        }
         loader.loadFirstPage { (entities: [ImageEntity]) in
             self.imageList = entities
             DispatchQueue.main.async {
                 self.bottomCollectionView!.reloadData()
             }
         }
+        /*
+        DispatchQueue.global().async {
+            self.setUpYolo()
+        }
+         */
     }
     
     func setUpTwitterMediaLoader(name: String) {
         self.name = name
         self.view.window?.title = name
         let fm = FileManager.default
-        let downloadPath = NSSearchPathForDirectoriesInDomains(.downloadsDirectory, .userDomainMask, true).first!
+        let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         var created = fm.fileExists(atPath: downloadPath + "/twmedia/.external/" + name)
         if !created {
             let dest = downloadPath + "/twmedia/.external/" + name
@@ -159,6 +525,7 @@ class ViewController: NSViewController {
     var generation : UInt = 0
     @IBAction func reload(_ sender: Any) {
         generation += 1
+        loadingItemCount = 0
         if generation == UInt.max {
             generation = 0
         }
@@ -172,6 +539,207 @@ class ViewController: NSViewController {
         }
     }
     
+    @IBAction func fetchPlaceholders(_ sender: Any) {
+        let previousGeneration = self.generation
+        for (itemIdx, item) in self.imageList.enumerated() {
+            let indexPath = IndexPath(item: itemIdx, section: 0)
+            switch item {
+            case .placeHolder(let (url, isLoading, attr)):
+                guard !isLoading else {continue}
+                guard attr["thumbnailUrl"] == nil else {continue}
+                self.imageList[itemIdx] = ImageEntity.placeHolder((url, true, attr))                
+                
+                
+                self.loadingItemCount += 1
+                self.loader?.load(entity: item) { (entities) in
+                    guard previousGeneration == self.generation else {
+                        debugPrint("generation miss 1: previous \(previousGeneration), now is \(self.generation)")
+                        return
+                    }
+                    DispatchQueue.main.async {
+                        self.loadingItemCount -= 1
+                    }
+                    guard !entities.isEmpty else {
+                        // placeHolder failed to load
+                        DispatchQueue.main.async {
+                            self.imageList[itemIdx] = ImageEntity.placeHolder((url, false, attr))
+                        }
+                        return
+                    }
+                    switch entities.first! {
+                    case .image(let (url, fileUrl, attr)):
+                        DispatchQueue.main.async {
+                            guard previousGeneration == self.generation else {
+                                debugPrint("generation miss 2: previous \(previousGeneration), now is \(self.generation)")
+                                return
+                            }
+                            self.imageList[itemIdx] = entities.first!
+                            guard self.bottomCollectionView.indexPathsForVisibleItems().contains(indexPath) else {
+                                // Do not trigger re-rendering for invisible cell
+                                if let fileUrl = fileUrl {
+                                    if !fileUrl.path.hasSuffix(".mp4") {
+                                        var newAttr = attr
+                                        newAttr["thumbnailUrl"] = fileUrl
+                                        newAttr.removeValue(forKey: "thumbnail")
+                                        self.imageList[itemIdx] = .placeHolder((url, false, newAttr))
+                                    }
+                                }
+                                return
+                            }
+                            let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
+                            self.bottomCollectionView.reloadItems(at: [indexPath])
+                            if shouldReselect {
+                                self.bottomCollectionView.deselectAll(nil)
+                                self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
+                            }
+                        }
+                    default:
+                        // placeHolder or batchPlaceHolder failed to load
+                        debugPrint("fail placeholder at \(indexPath.item)")
+                        
+                        DispatchQueue.main.async {
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, attr))
+                        }
+                    }
+                }
+                
+            default:
+                break
+            }
+        }
+    }
+    
+    var isLoadingAll: Bool = false {
+        didSet {
+            var placeHolderIsLoading = isLoadingAll
+            if let lastEntity = self.imageList.last {
+                switch lastEntity {
+                case .batchPlaceHolder(let (_, l)):
+                    placeHolderIsLoading = placeHolderIsLoading || l
+                default:
+                    break
+                }
+            }
+            if let submenu = self.view.window?.menu?.item(withTitle: "File")?.submenu {
+                if let loadMoreMenuItem = submenu.item(withTag: 102) {
+                    loadMoreMenuItem.isHidden = placeHolderIsLoading
+                }
+                if let loadAllMenuItem = submenu.item(withTag: 100) {
+                    loadAllMenuItem.isHidden = placeHolderIsLoading
+                }
+                if let stopLoadingMenuItem = submenu.item(withTag: 101) {
+                    stopLoadingMenuItem.isHidden = !placeHolderIsLoading
+                }
+            }
+            
+            
+        }
+    }
+    
+    @IBAction
+    func startLoadAll(_ sender: Any) {
+        if !isLoadingAll {
+            isLoadingAll = true
+            self.batchLoad(continueLoading: true)
+        }
+    }
+    
+    @IBAction
+    func loadOnce(_ sender: Any) {
+        if !isLoadingAll {
+            isLoadingAll = true
+            self.batchLoad()
+        }
+    }
+    
+    @IBAction
+    func showOpenPanel(_ sender: Any) {
+        let panel = NSOpenPanel()
+        panel.allowedFileTypes = ["npz"]
+        panel.beginSheetModal(for: view.window!) { response in
+            switch response {
+            case .OK:
+                // view
+                print("panel.url: \(panel.urls)")
+                self.setUpDCGANLoader(key: "", file: panel.urls.first!)
+            default:
+                break
+            }
+        }
+    }
+    
+    @IBAction
+    func showOpenDirectoryPanel(_ sender: Any) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.beginSheetModal(for: view.window!) { response in
+            switch response {
+            case .OK:
+                // view
+                print("panel.url: \(panel.urls)")
+                self.setUpPlainDirLoader(panel.urls.first!)
+            default:
+                break
+            }
+        }
+    }
+    
+    func batchLoad(continueLoading: Bool = false) {
+        guard isLoadingAll else { return }
+        if let lastEntity = self.imageList.last {
+            switch lastEntity {
+            case .batchPlaceHolder(let (url, _)):
+                self.imageList[self.imageList.count - 1] = .batchPlaceHolder((url, true))
+                // continue loading
+                // isLoadingAll = true
+                self.loader.load(entity: .batchPlaceHolder((url, false))) { entityList in
+                    DispatchQueue.main.async {
+                        guard !entityList.isEmpty else {
+                            return
+                        }
+                        self.loadingItemCount += 0
+                        self.bottomCollectionView.performBatchUpdates({
+                            let newLastEntity = entityList.last!
+                            let oldCount = self.imageList.count
+                            self.imageList.replaceSubrange((oldCount - 1)..<oldCount, with: entityList)
+                            self.bottomCollectionView.deleteItems(at: [IndexPath(item: oldCount - 1, section: 0)])
+                            var indexPaths = [IndexPath]()
+                            for i in (oldCount - 1)..<(oldCount - 1 + entityList.count) {
+                                indexPaths.append(IndexPath(item: i, section: 0))
+                            }
+                            self.bottomCollectionView.insertItems(at: Set(indexPaths))
+                            switch newLastEntity {
+                            case .batchPlaceHolder(let (url2, _)):
+                                self.imageList[self.imageList.count - 1] = .batchPlaceHolder((url2, false))
+                                
+                            default:
+                                break
+                            }
+                        }, completionHandler: { _ in
+                            DispatchQueue.main.async {
+                                if (continueLoading) {
+                                    self.batchLoad(continueLoading: continueLoading)
+                                } else {
+                                    self.isLoadingAll = false
+                                }
+                            }
+                        })
+                    }
+                }
+            default:
+                DispatchQueue.main.async {
+                    self.isLoadingAll = false
+                }
+                break
+            }
+        }
+        
+    }
+    @IBAction
+    func stopLoading(_ sender: Any) {
+        isLoadingAll = false
+    }
     override func prepare(for segue: NSStoryboardSegue, sender: Any?) {
         if segue.identifier == "open-sheet", let openVC = segue.destinationController as? OpenViewController {
             openVC.viewController = self
@@ -194,6 +762,7 @@ class ViewController: NSViewController {
             let identifier = NSStoryboardSegue.Identifier("open-sheet")
             performSegue(withIdentifier: identifier, sender: nil)
         }
+        self.view.window?.delegate = self
     }
     
     
@@ -236,7 +805,64 @@ class ViewController: NSViewController {
     
     override func moveToBeginningOfDocument(_ sender: Any?) {
         // CMD + up
+        bottomCollectionView.deselectAll(nil)
         bottomCollectionView.selectItems(at: [IndexPath(item: 0, section: 0)], scrollPosition: .left)
+    }
+    
+    func showTopInfo(_ attr: [String: Any]) {
+        if let title = attr["title"] {
+            let title = title as? String ?? ""
+            let author = attr["author"] as? String ?? ""
+            let text = attr["text"] as? String ?? ""
+            topInfoLabel.stringValue = title + "\nBy: " + author + "\n" + text
+        } else if let title = attr["name"] {
+            topInfoLabel.stringValue = title as? String ?? ""
+        } else {
+            topInfoLabel.stringValue = ""
+        }
+        reshowTopInfo()
+    }
+    
+    @objc
+    func reshowTopInfo() {
+        topInfoLabel.isHidden = false
+        topInfoLabel.alphaValue = 0.85
+        topInfoLabelTimer?.invalidate()
+        topInfoLabelTimer = Timer.scheduledTimer(withTimeInterval: 6.0, repeats: false, block: { (_) in
+            self.topInfoLabel.isHidden = true
+        })
+
+    }
+}
+
+extension ViewController {
+    @IBAction func copy(_ sender: Any?) {
+        if let index = bottomCollectionView.selectionIndexPaths.first {
+            let pb = NSPasteboard.general
+            pb.declareTypes([.string, .fileContents, .URL, .fileURL, .tiff, .png], owner: self)
+            if let img = self.topImageView.image {
+                pb.writeObjects([img])
+            }
+            switch self.imageList[index.item] {
+            case .placeHolder(let (url, _, attr)):
+                pb.setString(url.absoluteString, forType: .string)
+                pb.setString(url.absoluteString, forType: .URL)
+                if let fileUrl = attr["thumbnailUrl"] as? URL {
+                    pb.setString(fileUrl.absoluteString, forType: .fileURL)
+                }
+            case .image(let (url, fileUrl, attr)):
+                pb.setString(url.absoluteString, forType: .string)
+                pb.setString(url.absoluteString, forType: .URL)
+                
+                if let fileUrl = fileUrl {
+                    pb.setString(fileUrl.path, forType: .fileURL)
+                }
+                
+            case .batchPlaceHolder(let (url, _)):
+                pb.clearContents()
+                NSPasteboard.general.setString(url.absoluteString, forType: .URL)
+            }
+        }
     }
 }
 
@@ -249,18 +875,20 @@ extension ViewController: NSCollectionViewDataSource {
     }
     
     func collectionView(_ collectionView: NSCollectionView, itemForRepresentedObjectAt indexPath: IndexPath) -> NSCollectionViewItem {
-        print("item for indexPath \(indexPath.item)")
+        // print("item for indexPath \(indexPath.item)")
         let item = collectionView.makeItem(withIdentifier: itemId, for: indexPath)
+        (item as? ThumbnailItem)?.isVideo = false
         let originalEntity = imageList[indexPath.item]
         let previousGeneration = generation
         if let imageView = item.imageView {
             imageView.toolTip = nil
             switch imageList[indexPath.item] {
                 
-            case .batchPlaceHolder(let b):
+            case .batchPlaceHolder(let (batchUrl, _)):
                 
                 loader.load(entity: originalEntity) { (entities) in
                     guard previousGeneration == self.generation else { return }
+                    guard indexPath.item == self.imageList.count - 1 else { return }
                     if entities.count > 1 {
                         var indexPaths = Set<IndexPath>()
                         for x in 0..<entities.count {
@@ -269,12 +897,19 @@ extension ViewController: NSCollectionViewDataSource {
                         let idx = indexPath.item
                         DispatchQueue.main.async {
                             guard  previousGeneration == self.generation else {
+                                debugPrint("generation miss 3: previous \(previousGeneration), now is \(self.generation)")
                                 return
                             }
                             self.bottomCollectionView.performBatchUpdates({
                                 self.imageList.replaceSubrange(idx..<(idx + 1), with: entities)
+                                let oldSelection = self.bottomCollectionView.selectionIndexPaths
                                 self.bottomCollectionView.deleteItems(at: [indexPath])
                                 self.bottomCollectionView.insertItems(at: indexPaths)
+                                if oldSelection.count == 1 {
+                                    self.bottomCollectionView.deselectAll(nil)
+                                    self.bottomCollectionView.selectItems(at: oldSelection, scrollPosition: NSCollectionView.ScrollPosition.bottom)
+                                }
+                                self.loadingItemCount += 0
                             }, completionHandler: nil)
                         }
                         
@@ -283,66 +918,103 @@ extension ViewController: NSCollectionViewDataSource {
                         case .placeHolder, .image:
                             DispatchQueue.main.async {
                                 guard  previousGeneration == self.generation else {
+                                    debugPrint("generation miss 4: previous \(previousGeneration), now is \(self.generation)")
                                     return
                                 }
                                 self.imageList[indexPath.item] = entities.first!
+                                let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
                                 self.bottomCollectionView!.reloadItems(at: [indexPath])
+                                if shouldReselect {
+                                    self.bottomCollectionView.deselectAll(nil)
+                                    self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
+                                }
                             }
                             
-                        case .batchPlaceHolder(let b):
+                        case .batchPlaceHolder(let (batchUrl2, _)):
                             DispatchQueue.main.async {
-                                self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                                self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder((batchUrl2, false))
                             }
                             break
                         }
                     } else {
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                            self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder((batchUrl, false))
                         }
                     }
                 }
                 
                 imageView.image = nil
-                imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, true)
+                imageList[indexPath.item] = ImageEntity.batchPlaceHolder((batchUrl, true))
                 switch imageList[indexPath.item] {
                 case .batchPlaceHolder:
                     imageView.image = nil
-                    imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, true)
+                    imageList[indexPath.item] = ImageEntity.batchPlaceHolder((batchUrl, true))
                     imageView.toolTip = "Loading..."
                 default:
                     // If cache is hit, the entity could have been changed
                     break
                 }
-            case .image(let (_, cacheUrl, _)):
+            case .image(let (url, cacheUrl, attr)):
                 if let cacheUrl = cacheUrl {
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
+                        // debugPrint("load video thumb at \(indexPath.item)")
                         let thumbUrl = cacheUrl.appendingPathExtension("vthumb")
                         if let thumbnail = NSImage(contentsOf: thumbUrl) {
                             imageView.image = thumbnail
                         }
+                        // TODO: add file url to attr for key "thumbnailUrl"
+
+                        (item as? ThumbnailItem)?.isVideo = true
+                        //if let tItem = item as? ThumbnailItem { tItem.isVideo = true }
                     } else {
-                        imageView.image = NSImage(contentsOf: cacheUrl)
+                        // debugPrint("load image thumb at \(indexPath.item)")
+                        if let thb: NSImage = attr["thumbnail"] as! NSImage? {
+                            imageView.image = thb
+                            if url.scheme != "npy" {
+                                var reducedAttr = attr
+                                reducedAttr.removeValue(forKey: "thumbnail")
+                                // file url for image file in subreddit folder
+                                reducedAttr["thumbnailUrl"] = cacheUrl
+                                // invalidate the cgimage from cache immediately after showing it
+                                self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, reducedAttr))
+                            }
+                        } else {
+                            // fallback
+                            imageView.image = NSImage(contentsOf: cacheUrl)
+                        }
                     }
                 }
                 imageView.toolTip = self.toolTips[indexPath]
                 
-            case .placeHolder(let p):
-                let urlPath = p.0.host?.contains("v.redd.it") ?? false ? p.0.path : p.0.lastPathComponent
-                let author = p.2["author"] as? String ?? ""
-                let title = p.2["title"] as? String ?? ""
-                let selftext = p.2["text"] as? String ?? ""
-                let domain = p.2["domain"] as? String ?? ""
+//            case .placeHolder(let p):
+            case .placeHolder(let (url, isLoading, attr)):
+                let urlPath = url.host?.contains("v.redd.it") ?? false ? url.path : url.lastPathComponent
+                let author = attr["author"] as? String ?? ""
+                let title = attr["title"] as? String ?? ""
+                let selftext = attr["text"] as? String ?? ""
+                let domain = attr["domain"] as? String ?? ""
                 let toolTip = domain + ": " + urlPath + "\n" + author + "\n" + title +  (selftext.isEmpty ? "" : ("\n\"\"" + selftext + "\"\"\n"))
                 self.toolTips[indexPath] = toolTip
                 self.shortTips[indexPath] = domain + ": " + urlPath + " " + title
                 imageView.toolTip = toolTip
-                loader.load(entity: originalEntity) { (entities) in
+                if !isLoading {
+                    DispatchQueue.main.async {
+                        self.loadingItemCount += 1
+                        
+                    }
+                }
+                self.loader?.load(entity: originalEntity) { (entities) in
                     guard previousGeneration == self.generation else {
+                        debugPrint("generation miss 1: previous \(previousGeneration), now is \(self.generation)")
                         return
                     }
+                    DispatchQueue.main.async {
+                        self.loadingItemCount -= 1
+                    }
                     guard !entities.isEmpty else {
+                        // placeHolder failed to load
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, attr))
                         }
                         return
                     }
@@ -350,6 +1022,7 @@ extension ViewController: NSCollectionViewDataSource {
                     case .image:
                         DispatchQueue.main.async {
                             guard previousGeneration == self.generation else {
+                                debugPrint("generation miss 2: previous \(previousGeneration), now is \(self.generation)")
                                 return
                             }
                             self.imageList[indexPath.item] = entities.first!
@@ -357,11 +1030,20 @@ extension ViewController: NSCollectionViewDataSource {
                                 // Do not trigger re-rendering for invisible cell
                                 return
                             }
+                            let shouldReselect = self.bottomCollectionView.selectionIndexPaths.contains(indexPath)
                             self.bottomCollectionView.reloadItems(at: [indexPath])
+                            if shouldReselect {
+                                self.bottomCollectionView.deselectAll(nil)
+                                self.bottomCollectionView.selectItems(at: [indexPath], scrollPosition: .bottom)
+                            }
+
                         }
                     default:
+                        // placeHolder or batchPlaceHolder failed to load
+                        debugPrint("fail placeholder at \(indexPath.item)")
+
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, attr))
                         }
                     }
                 }
@@ -370,7 +1052,8 @@ extension ViewController: NSCollectionViewDataSource {
                     // if cache is hit, the entity in imageList might have been changed!
                     // skip the following lines
                     imageView.image = nil
-                    imageList[indexPath.item] = ImageEntity.placeHolder(p.0, true, p.2)
+                    //self.loadingItemCount -= 1
+                    imageList[indexPath.item] = ImageEntity.placeHolder((url, true, attr))
                     
                 default:
                     break
@@ -387,6 +1070,12 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: NSCollectionView, layout collectionViewLayout: NSCollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> NSSize {
         let layout = collectionViewLayout as! NSCollectionViewFlowLayout
         let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
+        let height = max(collectionView.bounds.height - margin, 20)
+        let size = CGSize(width: height, height: height)
+        return size
+        /*
+        let layout = collectionViewLayout as! NSCollectionViewFlowLayout
+        let margin = layout.sectionInset.top + layout.sectionInset.bottom + 4
         switch imageList[indexPath.item] {
         case .image(let (url, cacheUrl, _ /* attributes */)):
             //let isVideo = attributes[TwitterLoader.VideoKey] as? Bool ?? false
@@ -394,10 +1083,14 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                 let imageSize: CGSize?
                 if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                     let thumbUrl = cacheUrl.appendingPathExtension("vthumb")
-                    let thumbSize = sizeForImage[url] ?? NSImage(contentsOf: thumbUrl)?.size
+                    let thumbSize = autoreleasepool {
+                        sizeForImage[url] ?? NSImage(contentsOf: thumbUrl)?.size
+                    }
                     imageSize = thumbSize
                 } else {
-                    imageSize = sizeForImage[url] ?? NSImage(contentsOf: cacheUrl)?.size
+                    imageSize =  autoreleasepool {
+                        sizeForImage[url] ?? NSImage(contentsOf: cacheUrl)?.size
+                    }
                 }
                 if let s = imageSize {
                     sizeForImage[url] = s
@@ -413,6 +1106,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
             let size = CGSize(width: height, height: height)
             return size
         }
+         */
     }
     /*
      func collectionView(_ collectionView: NSCollectionView, shouldSelectItemsAt indexPaths: Set<IndexPath>) -> Set<IndexPath> {
@@ -421,37 +1115,130 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
      */
     func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
         if let indexPath = indexPaths.first {
+            let appDelegate = NSApp.delegate as! AppDelegate
             switch imageList[indexPath.item] {
                 
-            case .image(let (imageUrl, cacheUrl, _ /*attributes*/)):
+            case .image(let (imageUrl, cacheUrl, attr /*attributes*/)):
                 if let cacheUrl = cacheUrl {
+                    self.topUrl = cacheUrl
                     if cacheUrl.lastPathComponent.hasSuffix(".mp4") {
                         topPlayerView.isHidden = false
-                        topPlayerView.player = AVPlayer(url: cacheUrl)
+                        let item = AVPlayerItem(url: cacheUrl)
+                        let appDelegate = (NSApp.delegate as! AppDelegate)
+                        if let model = appDelegate.model ?? appDelegate.defaultModel {
+                            let composition = AVMutableVideoComposition(propertiesOf: item.asset)
+                            composition.customVideoCompositorClass = DetectionObservationCompositor.self
+                            item.videoComposition = composition
+                            if let compositor = item.customVideoCompositor as? DetectionObservationCompositor {
+                                compositor.detectionModel = model
+                                if let name = appDelegate.selectedFeatureName {
+                                    compositor.featureName = name
+                                }
+                            }
+                        }
+                        topPlayerView.player?.replaceCurrentItem(with: item)
+                        
                         topPlayerView.player?.play()
+                        showTopInfo(attr)
                     } else {
                         topPlayerView.player?.pause()
+                        topPlayerView.player?.replaceCurrentItem(with: nil)
                         topPlayerView.isHidden = true
-                        if let image = NSImage(contentsOf: cacheUrl) {
+                        if imageUrl.scheme == "npy", let img = attr["thumbnail"] as? NSImage {
+                            topImageView.image = img
+                        } else if let image = NSImage(contentsOf: cacheUrl) {
                             topImageView.image = image
                             if cacheUrl.pathExtension == "gif" {
                                 topImageView.canDrawSubviewsIntoLayer = true
                                 topImageView.animates = true
+                            } else {
+                                let yoloRequest = self.yoloRequestBuilder(for: image) { result in
+                                    DispatchQueue.main.async {
+                                        if let result = result, self.topUrl == cacheUrl {
+                                            self.topImageView.image = result
+                                        }
+                                    }
+                                }
+                                if let yoloRequest = yoloRequest {
+                                    let handler = VNImageRequestHandler(url: cacheUrl)
+                                    DispatchQueue.global().async {
+                                        try? handler.perform([yoloRequest])
+                                    }
+                                }
                             }
+                            // TODO: Show textual info and start a timer to hide afterwards
+                            showTopInfo(attr)
                         }
                     }
                 } else {
                     topImageView.image = NSImage(contentsOf: imageUrl)
+                    showTopInfo(attr)
                 }
+                /*
                 if let shortTip = shortTips[indexPath] {
                     self.view.window?.title = name + ": " + shortTip
                 } else {
                     self.view.window?.title = name + ": ..."
-                }
+                }*/
             case .batchPlaceHolder:
                 break
-            case .placeHolder:
-                break
+            case .placeHolder(let (url, isLoading, attr)):
+                if let e = self.loader?.loadCachedPlaceHolder(with: url, attributes: attr) {
+                    switch e {
+                    case .image(let (_, cacheUrl, attributes)):
+                        self.topUrl = cacheUrl
+                        if let img = attributes["thumbnail"] as? NSImage {
+                            self.topPlayerView.player?.pause()
+                            self.topPlayerView.player?.replaceCurrentItem(with: nil)
+                            self.topPlayerView.isHidden = true
+                            self.topImageView.image = img
+                            if cacheUrl?.pathExtension == "gif" {
+                                self.topImageView.canDrawSubviewsIntoLayer = true
+                                self.topImageView.animates = true
+                                
+                            } else if let cacheUrl = cacheUrl {
+                                let yoloRequest = self.yoloRequestBuilder(for: img) { result in
+                                    DispatchQueue.main.async {
+                                        if let result = result, self.topUrl == cacheUrl {
+                                            self.topImageView.image = result
+                                        }
+                                    }
+                                }
+                                if let yoloRequest = yoloRequest {
+                                    let handler = VNImageRequestHandler(url: cacheUrl)
+                                    DispatchQueue.global().async {
+                                        try? handler.perform([yoloRequest])
+                                    }
+                                }
+                            }
+                            self.showTopInfo(attributes)
+                            
+                        }
+                    default:
+                        break
+                    }
+                }
+                /*
+                loader.loadPlaceHolder(with: url, cacheFileUrl: loader.cacheFileUrl(for: url), attributes: [:]) { (es) in
+                    if let e = es.first {
+                        switch e {
+                        case .image(let (_, cacheUrl, attributes)):
+                            if let img = attributes["thumbnail"] as? NSImage {
+                                self.topPlayerView.player?.pause()
+                                self.topPlayerView.isHidden = true
+                                self.topImageView.image = img
+                                if cacheUrl?.pathExtension == "gif" {
+                                    self.topImageView.canDrawSubviewsIntoLayer = true
+                                    self.topImageView.animates = true
+                                }
+                                
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+                */
             }
         }
     }
@@ -461,5 +1248,110 @@ extension ViewController: NSSplitViewDelegate {
     func splitViewDidResizeSubviews(_ notification: Notification) {
         bottomHeight = bottomCollectionView.bounds.height
         
+    }
+}
+
+extension ViewController: NSCollectionViewDelegate {
+    func collectionView(_ collectionView: NSCollectionView, canDragItemsAt indexPaths: Set<IndexPath>, with event: NSEvent) -> Bool {
+        for indexPath in indexPaths {
+            switch imageList[indexPath.item] {
+            case .batchPlaceHolder(_):
+                return false
+            default:
+                break
+            }
+        }
+        return true
+    }
+    
+    func promiseProvider(for cacheUrl: URL) -> ThumbItemFilePromiseProvider? {
+        let pathExt = cacheUrl.pathExtension
+        guard let typeIdentifier = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, pathExt as CFString, nil) else {
+            return nil
+        }
+        let provider = ThumbItemFilePromiseProvider(fileType: typeIdentifier.takeRetainedValue() as String, delegate: self)
+        provider.userInfo = [ThumbItemFilePromiseProvider.UserInfoKeys.urlKey: cacheUrl]
+        return provider
+    }
+    
+    func collectionView(_ collectionView: NSCollectionView, pasteboardWriterForItemAt index: Int) -> NSPasteboardWriting? {
+        switch imageList[index] {
+        case .batchPlaceHolder(_):
+            return nil
+        case .image(let (url, cacheUrl, _)):
+            guard let cacheUrl = cacheUrl else {return nil}
+            guard url.scheme != "npy" else {return nil}
+            return promiseProvider(for: cacheUrl)
+        
+        case .placeHolder(let (url, isLoading, attr)):
+            guard !isLoading else {
+                debugPrint("still loading")
+                return nil
+                
+            }
+            guard let cacheUrl = self.loader?.cacheFileUrl(for: url) else {return nil}
+            return promiseProvider(for: cacheUrl)
+        }
+    }
+//    func collectionView(_ collectionView: NSCollectionView, draggingSession session: NSDraggingSession, endedAt screenPoint: NSPoint, dragOperation operation: NSDragOperation) {
+//        if operation == .delete, let items = session.draggingPasteboard.pasteboardItems {
+//            for pasteboardItem in items {
+//                if let photoIdx = pasteboardItem.propertyList(forType: ) as? Int {
+//                    let indexPath = IndexPath(item: photoIdx, section: 0)
+//
+//                }
+//            }
+//        }
+//    }
+}
+
+extension ViewController: NSFilePromiseProviderDelegate {
+    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, fileNameForType fileType: String) -> String {
+        return ((filePromiseProvider.userInfo as! [String: URL])[ThumbItemFilePromiseProvider.UserInfoKeys.urlKey]!).lastPathComponent
+    }
+    
+    func filePromiseProvider(_ filePromiseProvider: NSFilePromiseProvider, writePromiseTo url: URL, completionHandler: @escaping (Error?) -> Void) {
+        let fm = FileManager()
+        let source = ((filePromiseProvider.userInfo as! [String: URL])[ThumbItemFilePromiseProvider.UserInfoKeys.urlKey]!)
+        do {
+            try fm.copyItem(at: source, to: url)
+            completionHandler(nil)
+        } catch let error {
+            completionHandler(error)
+        }
+        
+    }
+    
+    
+}
+
+//extension ViewController: NSDraggingSource {
+//    func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+//        switch context {
+//        case .outsideApplication:
+//            return NSDragOperation.copy
+//        case .withinApplication:
+//            return NSDragOperation.copy
+//
+//        @unknown default:
+//            fatalError()
+//        }
+//    }
+//}
+
+
+extension ViewController: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        if let redditLoader = self.loader as? RedditLoader {
+            redditLoader.session.invalidateAndCancel()
+            redditLoader.redditSession.invalidateAndCancel()
+        }
+        self.loader = nil
+        if let ob = itemReloadObserver {
+            NotificationCenter.default.removeObserver(ob)
+        }
+    }
+    func windowDidBecomeKey(_ notification: Notification) {
+        self.isLoadingAll = !(!(self.isLoadingAll))
     }
 }

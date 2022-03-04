@@ -1,16 +1,15 @@
 //
-//  XTimelineTests.swift
-//  XTimelineTests
+//  XTimeline_iOSTests.swift
+//  XTimeline-iOSTests
 //
-//  Created by ZhangChen on 2018/10/7.
-//  Copyright © 2018 ZhangChen. All rights reserved.
+//  Created by cuser on 2019/2/11.
+//  Copyright © 2019 ZhangChen. All rights reserved.
 //
 
 import XCTest
-@testable import XTimeline
-@testable import SwiftZip
+@testable import XTimeline_iOS
 
-class XTimelineTests: XCTestCase {
+class XTimeline_iOSTests: XCTestCase {
 
     override func setUp() {
         // Put setup code here. This method is called before the invocation of each test method in the class.
