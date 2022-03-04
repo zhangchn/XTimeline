@@ -811,7 +811,10 @@ class ViewController: NSViewController {
     
     func showTopInfo(_ attr: [String: Any]) {
         if let title = attr["title"] {
-            topInfoLabel.stringValue = (attr["title"] as? String ?? "") + "\nBy: " + (attr["author"] as? String ?? "") + "\n" + (attr["text"] as? String ?? "")
+            let title = title as? String ?? ""
+            let author = attr["author"] as? String ?? ""
+            let text = attr["text"] as? String ?? ""
+            topInfoLabel.stringValue = title + "\nBy: " + author + "\n" + text
         } else if let title = attr["name"] {
             topInfoLabel.stringValue = title as? String ?? ""
         } else {
@@ -819,6 +822,7 @@ class ViewController: NSViewController {
         }
         reshowTopInfo()
     }
+    
     @objc
     func reshowTopInfo() {
         topInfoLabel.isHidden = false
