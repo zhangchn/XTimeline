@@ -15,7 +15,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     var defaultModel: VNCoreMLModel!
     var model: VNCoreMLModel?
-    var outputDesc: [String:MLFeatureDescription]?
+    var compiledUrl: URL?
+    // var outputDesc: [String:MLFeatureDescription]?
     var selectedFeatureName: String? = "var_944"
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {

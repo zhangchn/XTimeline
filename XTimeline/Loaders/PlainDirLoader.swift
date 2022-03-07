@@ -69,6 +69,10 @@ class PlainDirLoader: AbstractImageLoader {
         return nil
     }
     
+    override func cacheFileUrl(for url: URL) -> URL? {
+        return url
+    }
+    
     /*
     override func load(entity: AbstractImageLoader.EntityKind, completion: @escaping ([AbstractImageLoader.EntityKind]) -> ()) {
         switch entity {

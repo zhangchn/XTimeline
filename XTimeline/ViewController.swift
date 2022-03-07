@@ -144,7 +144,10 @@ class ViewController: NSViewController {
     }
     
     var defaultModel: VNCoreMLModel!
-    var model: VNCoreMLModel?
+    // var model: VNCoreMLModel?
+    
+    var modelUrls: [(String, URL, [String], VNCoreMLModel)] = []
+    
     // var outputDesc: [String:MLFeatureDescription]?
     @IBAction func loadModel(_ sender: Any) {
         let openPanel = NSOpenPanel()
@@ -153,61 +156,119 @@ class ViewController: NSViewController {
         let appDelegate = NSApp.delegate as! AppDelegate
         openPanel.beginSheetModal(for: view.window!) { resp in
             if let url = openPanel.url {
+                let fileName = url.lastPathComponent
                 var outputDesc: [String: MLFeatureDescription]?
+                var model: MLModel?
+                var visionModel: VNCoreMLModel!
+                var compiledUrl: URL!
                 if url.pathExtension == "mlmodel" {
-                    do {
-                        let compiledUrl = try MLModel.compileModel(at: url)
-                        let yoloMLModel = try MLModel(contentsOf: compiledUrl)
-                        appDelegate.model = try VNCoreMLModel(for: yoloMLModel)
-                        outputDesc = yoloMLModel.modelDescription.outputDescriptionsByName
-                    } catch let e {
-                        print(e)
+                    guard let u = try? MLModel.compileModel(at: url) else {
+                        return
                     }
+                    compiledUrl = u
                 } else if url.pathExtension == "mlmodelc" {
-                    do {
-                        let yoloMLModel = try MLModel(contentsOf: url)
-                        outputDesc = yoloMLModel.modelDescription.outputDescriptionsByName
-                        appDelegate.model = try VNCoreMLModel(for: yoloMLModel)
-                    } catch let e {
-                        print(e)
+                    compiledUrl = url
+                }
+                
+                for (_, u, _, _) in self.modelUrls {
+                    if u == compiledUrl {
+                        return
                     }
                 }
-                if let outputDesc = outputDesc {
-                    appDelegate.outputDesc = outputDesc
-                    DispatchQueue.main.async {
-                        // generate feature selection menus
-                        let menuItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Output Feature")
-                        menuItem?.isEnabled = !outputDesc.isEmpty
-                        let submenu = NSMenu()
-                        
-                        for (key, _) in outputDesc {
-                            print("feature key: \(key)")
-                            let subItem = NSMenuItem(title: key, action: #selector(self.didSelectFeature(_:)), keyEquivalent: "")
-                            submenu.addItem(subItem)
-                            subItem.target = self
-                        }
-                        if submenu.items.count == 1 {
-                            submenu.items.first?.state = .on
-                            appDelegate.selectedFeatureName = submenu.items.first!.title
-                            // self.selectedFeatureName = submenu.items.first!.title
-                        }
-                        menuItem?.submenu = submenu
-                    }
+                do {
+                    let yoloMLModel = try MLModel(contentsOf: compiledUrl)
+                    visionModel = try VNCoreMLModel(for: yoloMLModel)
+                    model = yoloMLModel
+                    outputDesc = yoloMLModel.modelDescription.outputDescriptionsByName
+                } catch let e {
+                    print(e)
+                    return
                 }
+                
+                //if let outputDesc = outputDesc {
+                DispatchQueue.main.async {
+                    self.modelUrls.append((fileName, compiledUrl, Array(outputDesc!.keys), visionModel))
+                    // generate feature selection menus
+                    let detectionModelItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Detection Model")
+                    let submenu = detectionModelItem?.submenu
+                    var items = submenu!.items.prefix(upTo: 3)
+                    
+                    submenu?.removeAllItems()
+                    let newSubmenu = NSMenu()
+                    for (i, (fileName, _, names, _)) in self.modelUrls.enumerated() {
+                        // print("feature key: \(key)")
+                        let item = NSMenuItem(title: fileName, action: #selector(self.didSelectModel(_:)), keyEquivalent: "")
+                        item.tag = 500 + i
+                        let itemSubmenu = NSMenu()
+                        for name in names {
+                            let nameItem = NSMenuItem(title: name, action: #selector(self.didSelectFeature(_:)), keyEquivalent: "")
+                            // nameItem.setValue(compiledUrl, forKey: "model")
+                            nameItem.tag = 10000 + i
+                            itemSubmenu.addItem(nameItem)
+                        }
+                        item.submenu = itemSubmenu
+                        items.append(item)
+                    }
+                    newSubmenu.items = Array(items)
+                    detectionModelItem?.submenu = newSubmenu
+                }
+                //}
                 // self.setUpYolo()
             }
+        }
+    }
+    
+    @IBAction
+    func clearAllModels(_ sender: Any) {
+        self.modelUrls = []
+        let appDelegate = NSApp.delegate as! AppDelegate
+        appDelegate.model = nil
+        appDelegate.compiledUrl = nil
+        // generate feature selection menus
+        let detectionModelItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Detection Model")
+        let submenu = detectionModelItem?.submenu
+        let items = submenu!.items.prefix(upTo: 3)
+        let newSubmenu = NSMenu()
+        newSubmenu.items = Array(items)
+        detectionModelItem?.submenu = newSubmenu
+    }
+    
+    @objc
+    func didSelectModel(_ sender: Any) {
+        guard let sender = sender as? NSMenuItem else {return}
+        let modelIndex = sender.tag - 500
+        guard modelIndex >= 0 && modelIndex < modelUrls.count else {
+            return
+        }
+        for item in sender.menu!.items {
+            let idx = item.tag - 500
+            item.state = idx == modelIndex ? .on : .off
         }
     }
     
     @objc
     func didSelectFeature(_ sender: Any) {
         guard let sender = sender as? NSMenuItem else {return}
+        let featureName = sender.title
+        let modelIndex = sender.tag - 10000
+        guard modelIndex >= 0 && modelIndex < modelUrls.count else {
+            return
+        }
+        
         let appDelegate = NSApp.delegate as! AppDelegate
-        appDelegate.selectedFeatureName = sender.title
-        if let submenu = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Output Feature")?.submenu {
-            for item in submenu.items {
-                item.state = item == sender ? .on : .off
-            }
+        appDelegate.selectedFeatureName = featureName
+        for item in sender.menu!.items {
+            item.state = item == sender ? .on : .off
+        }
+        let (_, newUrl, _, model) = modelUrls[modelIndex]
+        if let currentUrl = appDelegate.compiledUrl, currentUrl == newUrl {
+            return
+        }
+        appDelegate.compiledUrl = newUrl
+        appDelegate.model = model
+        for item in sender.menu!.supermenu!.items {
+            let idx = item.tag - 500
+            item.state = idx == modelIndex ? .on : .off
         }
     }
     
