@@ -225,9 +225,12 @@ class ViewController: NSViewController {
         appDelegate.model = nil
         appDelegate.compiledUrl = nil
         // generate feature selection menus
+        
         let detectionModelItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Detection Model")
         let submenu = detectionModelItem?.submenu
         let items = submenu!.items.prefix(upTo: 3)
+        submenu?.removeAllItems()
+        
         let newSubmenu = NSMenu()
         newSubmenu.items = Array(items)
         detectionModelItem?.submenu = newSubmenu
@@ -243,6 +246,21 @@ class ViewController: NSViewController {
         for item in sender.menu!.items {
             let idx = item.tag - 500
             item.state = idx == modelIndex ? .on : .off
+        }
+        if let url = topUrl, let image = NSImage(contentsOf: url) {
+            let yoloRequest = self.yoloRequestBuilder(for: image) { result in
+                DispatchQueue.main.async {
+                    if let result = result, self.topUrl == url {
+                        self.topImageView.image = result
+                    }
+                }
+            }
+            if let yoloRequest = yoloRequest {
+                let handler = VNImageRequestHandler(url: url)
+                DispatchQueue.global().async {
+                    try? handler.perform([yoloRequest])
+                }
+            }
         }
     }
     
@@ -269,6 +287,22 @@ class ViewController: NSViewController {
         for item in sender.menu!.supermenu!.items {
             let idx = item.tag - 500
             item.state = idx == modelIndex ? .on : .off
+        }
+        
+        if let url = topUrl, let image = NSImage(contentsOf: url) {
+            let yoloRequest = self.yoloRequestBuilder(for: image) { result in
+                DispatchQueue.main.async {
+                    if let result = result, self.topUrl == url {
+                        self.topImageView.image = result
+                    }
+                }
+            }
+            if let yoloRequest = yoloRequest {
+                let handler = VNImageRequestHandler(url: url)
+                DispatchQueue.global().async {
+                    try? handler.perform([yoloRequest])
+                }
+            }
         }
     }
     
