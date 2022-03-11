@@ -192,23 +192,23 @@ class ThumbViewController: UITableViewController {
                             
                         case .batchPlaceHolder(let b):
                             DispatchQueue.main.async {
-                                self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                                self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder((b.0, false))
                             }
                             break
                         }
                     } else {
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, false)
+                            self.imageList[indexPath.item] = ImageEntity.batchPlaceHolder((b.0, false))
                         }
                     }
                 }
                 
                 imageView.image = nil
-                imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, true)
+                imageList[indexPath.item] = ImageEntity.batchPlaceHolder((b.0, true))
                 switch imageList[indexPath.item] {
                 case .batchPlaceHolder:
                     imageView.image = nil
-                    imageList[indexPath.item] = ImageEntity.batchPlaceHolder(b.0, true)
+                    imageList[indexPath.item] = ImageEntity.batchPlaceHolder((b.0, true))
                     //imageView.toolTip = "Loading..."
                 default:
                     // If cache is hit, the entity could have been changed
@@ -247,7 +247,7 @@ class ThumbViewController: UITableViewController {
                     }
                     guard !entities.isEmpty else {
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((p.0, false, p.2))
                         }
                         return
                     }
@@ -273,7 +273,7 @@ class ThumbViewController: UITableViewController {
                         }
                     default:
                         DispatchQueue.main.async {
-                            self.imageList[indexPath.item] = ImageEntity.placeHolder(p.0, false, p.2)
+                            self.imageList[indexPath.item] = ImageEntity.placeHolder((p.0, false, p.2))
                         }
                     }
                 }
@@ -282,7 +282,7 @@ class ThumbViewController: UITableViewController {
                     // if cache is hit, the entity in imageList might have been changed!
                     // skip the following lines
                     imageView.image = nil
-                    imageList[indexPath.item] = ImageEntity.placeHolder(p.0, true, p.2)
+                    imageList[indexPath.item] = ImageEntity.placeHolder((p.0, true, p.2))
                     
                 default:
                     break

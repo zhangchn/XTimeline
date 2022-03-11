@@ -36,6 +36,8 @@
 		DB7358A822116F5D00150E4C /* AbstractEntityAndLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B97FD216A403F00A417AD /* AbstractEntityAndLoader.swift */; };
 		DB7358AB2211740200150E4C /* ThumbViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7358A9221173FE00150E4C /* ThumbViewController.swift */; };
 		DB7358AE2212569300150E4C /* AddViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7358AC2212568800150E4C /* AddViewController.swift */; };
+		DBD935C027D980C0005EA6F1 /* RedditDB.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234093277D926700E02D67 /* RedditDB.swift */; };
+		DBD935C127D980C8005EA6F1 /* RedditData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234095277D92C600E02D67 /* RedditData.swift */; };
 		DBF1B76E27AE7D0200128E1D /* best.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = DBF1B76D27AE7D0200128E1D /* best.mlmodel */; };
 		DBF1B77027AEF1C500128E1D /* PlainDirLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF1B76F27AEF1C500128E1D /* PlainDirLoader.swift */; };
 		DBF2E577223D243700C2BA4D /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBF2E576223D243700C2BA4D /* AVKit.framework */; };
@@ -572,6 +574,8 @@
 				DB7358A722116F3A00150E4C /* RedditLoader.swift in Sources */,
 				DB73587E22114F6900150E4C /* DetailViewController.swift in Sources */,
 				DB7358AE2212569300150E4C /* AddViewController.swift in Sources */,
+				DBD935C127D980C8005EA6F1 /* RedditData.swift in Sources */,
+				DBD935C027D980C0005EA6F1 /* RedditDB.swift in Sources */,
 				DB73587C22114F6900150E4C /* MasterViewController.swift in Sources */,
 				DB73587A22114F6900150E4C /* AppDelegate.swift in Sources */,
 				DB7358A822116F5D00150E4C /* AbstractEntityAndLoader.swift in Sources */,

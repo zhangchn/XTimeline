@@ -322,7 +322,7 @@ class RedditLoader: AbstractImageLoader {
                             }
                             var attributes = attributes
                             attributes["size"] = img.size
-                            return completion([EntityKind.image(url, cacheFileUrl, attributes)])
+                            return completion([EntityKind.image((url, cacheFileUrl, attributes))])
                         }
                         return completion([])
                         #endif
@@ -397,7 +397,7 @@ class RedditLoader: AbstractImageLoader {
                 }
                 #elseif os(iOS)
                 if fileManager.fileExists(atPath: cacheFileUrl.path), let _ = UIImage(contentsOfFile: cacheFileUrl.path) {
-                    return EntityKind.image(url, cacheFileUrl, attributes)
+                    return EntityKind.image((url, cacheFileUrl, attributes))
                 }
                 #endif
             }
