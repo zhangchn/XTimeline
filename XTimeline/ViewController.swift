@@ -86,6 +86,17 @@ class ViewController: NSViewController {
     var loader: LoaderType!
     var itemReloadObserver: AnyObject?
     typealias ImageEntity = LoadableImageEntity
+    
+    var shouldLoadVideo = true
+    
+    @IBAction
+    func toggleVideoLoading(_ sender: Any) {
+        shouldLoadVideo = !shouldLoadVideo
+        if let sender = sender as? NSMenuItem {
+            sender.state = shouldLoadVideo ? .on : .off
+        }
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         topPlayerView.player = AVPlayer()
@@ -191,7 +202,8 @@ class ViewController: NSViewController {
                     // generate feature selection menus
                     let detectionModelItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Detection Model")
                     let submenu = detectionModelItem?.submenu
-                    var items = submenu!.items.prefix(upTo: 3)
+                    let sepIdx = submenu!.indexOfItem(withTag: 199)
+                    var items = submenu!.items.prefix(upTo: sepIdx + 1)
                     
                     submenu?.removeAllItems()
                     let newSubmenu = NSMenu()
@@ -228,7 +240,8 @@ class ViewController: NSViewController {
         
         let detectionModelItem = self.view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Detection Model")
         let submenu = detectionModelItem?.submenu
-        let items = submenu!.items.prefix(upTo: 3)
+        let sepIdx = submenu!.indexOfItem(withTag: 199)
+        let items = submenu!.items.prefix(upTo: sepIdx + 1)
         submenu?.removeAllItems()
         
         let newSubmenu = NSMenu()
@@ -247,7 +260,8 @@ class ViewController: NSViewController {
             let idx = item.tag - 500
             item.state = idx == modelIndex ? .on : .off
         }
-        if let url = topUrl, let image = NSImage(contentsOf: url) {
+        let appDelegate = NSApp.delegate as! AppDelegate
+        if let url = topUrl, let image = NSImage(contentsOf: url), appDelegate.imageDetectionEnabled {
             let yoloRequest = self.yoloRequestBuilder(for: image) { result in
                 DispatchQueue.main.async {
                     if let result = result, self.topUrl == url {
@@ -289,7 +303,7 @@ class ViewController: NSViewController {
             item.state = idx == modelIndex ? .on : .off
         }
         
-        if let url = topUrl, let image = NSImage(contentsOf: url) {
+        if let url = topUrl, let image = NSImage(contentsOf: url), appDelegate.imageDetectionEnabled {
             let yoloRequest = self.yoloRequestBuilder(for: image) { result in
                 DispatchQueue.main.async {
                     if let result = result, self.topUrl == url {
@@ -1098,7 +1112,8 @@ extension ViewController: NSCollectionViewDataSource {
                         
                     }
                 }
-                self.loader?.load(entity: originalEntity) { (entities) in
+                if !(url.lastPathComponent.hasSuffix(".mp4") && url.lastPathComponent.hasSuffix(".gif")) || shouldLoadVideo {
+                    self.loader?.load(entity: originalEntity) { (entities) in
                     guard previousGeneration == self.generation else {
                         debugPrint("generation miss 1: previous \(previousGeneration), now is \(self.generation)")
                         return
@@ -1141,6 +1156,7 @@ extension ViewController: NSCollectionViewDataSource {
                             self.imageList[indexPath.item] = ImageEntity.placeHolder((url, false, attr))
                         }
                     }
+                }
                 }
                 switch imageList[indexPath.item] {
                 case .placeHolder:
@@ -1220,7 +1236,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                         topPlayerView.isHidden = false
                         let item = AVPlayerItem(url: cacheUrl)
                         let appDelegate = (NSApp.delegate as! AppDelegate)
-                        if let model = appDelegate.model ?? appDelegate.defaultModel {
+                        if let model = appDelegate.model ?? appDelegate.defaultModel, appDelegate.videoDetectionEnabled {
                             let composition = AVMutableVideoComposition(propertiesOf: item.asset)
                             composition.customVideoCompositorClass = DetectionObservationCompositor.self
                             item.videoComposition = composition
@@ -1246,7 +1262,8 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                             if cacheUrl.pathExtension == "gif" {
                                 topImageView.canDrawSubviewsIntoLayer = true
                                 topImageView.animates = true
-                            } else {
+                            } else if appDelegate.imageDetectionEnabled {
+                                
                                 let yoloRequest = self.yoloRequestBuilder(for: image) { result in
                                     DispatchQueue.main.async {
                                         if let result = result, self.topUrl == cacheUrl {
@@ -1291,7 +1308,7 @@ extension ViewController: NSCollectionViewDelegateFlowLayout {
                                 self.topImageView.canDrawSubviewsIntoLayer = true
                                 self.topImageView.animates = true
                                 
-                            } else if let cacheUrl = cacheUrl {
+                            } else if let cacheUrl = cacheUrl, appDelegate.imageDetectionEnabled {
                                 let yoloRequest = self.yoloRequestBuilder(for: img) { result in
                                     DispatchQueue.main.async {
                                         if let result = result, self.topUrl == cacheUrl {
@@ -1446,7 +1463,12 @@ extension ViewController: NSWindowDelegate {
             NotificationCenter.default.removeObserver(ob)
         }
     }
+    
     func windowDidBecomeKey(_ notification: Notification) {
         self.isLoadingAll = !(!(self.isLoadingAll))
+        if let item = view.window?.menu?.item(withTitle: "File")?.submenu?.item(withTitle: "Load Video") {
+            item.state = self.shouldLoadVideo ? .on : .off
+            item.isEnabled = true
+        }
     }
 }

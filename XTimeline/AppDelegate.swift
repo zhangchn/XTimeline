@@ -16,6 +16,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var defaultModel: VNCoreMLModel!
     var model: VNCoreMLModel?
     var compiledUrl: URL?
+    
+    var imageDetectionEnabled = true
+    var videoDetectionEnabled = true
     // var outputDesc: [String:MLFeatureDescription]?
     var selectedFeatureName: String? = "var_944"
 
@@ -38,6 +41,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             // Fallback on earlier versions
             print("core ml not available")
+        }
+    }
+    
+    @IBAction
+    func toggleImageDetection(_ sender: Any) {
+        imageDetectionEnabled = !imageDetectionEnabled
+        if let menuItem = sender as? NSMenuItem {
+            menuItem.state = imageDetectionEnabled ? .on : .off
+        }
+    }
+    
+    @IBAction
+    func toggleVideoDetection(_ sender: Any) {
+        videoDetectionEnabled = !videoDetectionEnabled
+        if let menuItem = sender as? NSMenuItem {
+            menuItem.state = videoDetectionEnabled ? .on : .off
         }
     }
 }

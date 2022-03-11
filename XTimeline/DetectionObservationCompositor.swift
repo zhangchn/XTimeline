@@ -160,9 +160,8 @@ class DetectionObservationCompositor: NSObject {
                         
                     }
                 }
-                CVPixelBufferUnlockBaseAddress(dstFrame, [])
                 compositionRequest.finish(withComposedVideoFrame: dstFrame)
-
+                CVPixelBufferUnlockBaseAddress(dstFrame, [])
             }
             // DEBUG
             /*

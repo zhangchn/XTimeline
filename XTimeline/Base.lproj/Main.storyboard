@@ -107,8 +107,20 @@
                                         </menuItem>
                                         <menuItem title="Detection Model" id="Ymi-fC-v3n">
                                             <modifierMask key="keyEquivalentModifierMask"/>
-                                            <menu key="submenu" title="Detection Model" showsStateColumn="NO" id="Uyk-8c-Ttj">
+                                            <menu key="submenu" title="Detection Model" id="Uyk-8c-Ttj">
                                                 <items>
+                                                    <menuItem title="Detect Image" state="on" id="JWH-ul-1ic">
+                                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                                        <connections>
+                                                            <action selector="toggleImageDetection:" target="Voe-Tx-rLC" id="JdR-S2-moG"/>
+                                                        </connections>
+                                                    </menuItem>
+                                                    <menuItem title="Detect Video" state="on" id="XD0-3b-2In">
+                                                        <modifierMask key="keyEquivalentModifierMask"/>
+                                                        <connections>
+                                                            <action selector="toggleVideoDetection:" target="Voe-Tx-rLC" id="YPd-4C-bCI"/>
+                                                        </connections>
+                                                    </menuItem>
                                                     <menuItem title="Load..." keyEquivalent="l" id="cV6-DX-Ks4">
                                                         <connections>
                                                             <action selector="loadModel:" target="Ady-hI-5gd" id="Ior-Gd-a4t"/>
@@ -120,7 +132,7 @@
                                                             <action selector="clearAllModels:" target="Ady-hI-5gd" id="Mlm-hd-1Sr"/>
                                                         </connections>
                                                     </menuItem>
-                                                    <menuItem isSeparatorItem="YES" id="EBU-kg-YJd"/>
+                                                    <menuItem isSeparatorItem="YES" tag="199" id="EBU-kg-YJd"/>
                                                 </items>
                                             </menu>
                                         </menuItem>
@@ -147,6 +159,12 @@
                                         <menuItem title="Stop Loading" tag="101" hidden="YES" keyEquivalent="S" id="Ihi-cE-HCi" userLabel="Stop loading">
                                             <connections>
                                                 <action selector="stopLoading:" target="Ady-hI-5gd" id="MLf-go-a0b"/>
+                                            </connections>
+                                        </menuItem>
+                                        <menuItem title="Load Video" state="on" id="dN0-tj-3bP">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="toggleVideoLoading:" target="Ady-hI-5gd" id="oEh-4G-Ecx"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="aJh-i4-bef"/>
@@ -745,7 +763,7 @@
                 </windowController>
                 <customObject id="Oky-zY-oP4" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>
             </objects>
-            <point key="canvasLocation" x="94" y="450"/>
+            <point key="canvasLocation" x="187" y="625"/>
         </scene>
         <!--Open View Controller-->
         <scene sceneID="gfA-Th-9d9">
