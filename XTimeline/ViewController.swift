@@ -538,6 +538,16 @@ class ViewController: NSViewController {
     func setUpRedditLoader(name: String, offline: Bool = false) {
         self.name = name
         self.view.window?.title = name
+        try {
+            loader = RedditLoader.setUpRedditLoader(name: name, session: session, offline: offline)
+        } catch let err {
+            let alert = NSAlert(error: err)
+            alert.beginSheetModal(for: self.view.window!) { (resp) in
+                self.view.window?.close()
+                return
+            }
+        }
+        /*
         let fm = FileManager.default
         let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
         var created = fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name)
@@ -575,6 +585,7 @@ class ViewController: NSViewController {
         } else {
             loader = RedditLoader(name: name, session: session, external: external)
         }
+         */
         loader.loadFirstPage { (entities: [ImageEntity]) in
             self.imageList = entities
             DispatchQueue.main.async {
@@ -655,6 +666,9 @@ class ViewController: NSViewController {
             switch item {
             case .placeHolder(let (url, isLoading, attr)):
                 guard !isLoading else {continue}
+                if (url.lastPathComponent.hasSuffix("mp4") || url.lastPathComponent.hasSuffix("gif")) && !shouldLoadVideo {
+                    return
+                }
                 guard attr["thumbnailUrl"] == nil else {continue}
                 self.imageList[itemIdx] = ImageEntity.placeHolder((url, true, attr))                
                 

@@ -224,6 +224,37 @@ class RedditLoader: AbstractImageLoader {
             return nil
         }
     }
+    
+    class func setUpRedditLoader(name: String, session: URLSession, offline: Bool = false) throws -> RedditLoader {
+        let fm = FileManager.default
+        let downloadPath = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
+        var created = fm.fileExists(atPath: downloadPath + "/reddit/.external/" + name)
+        let external = created
+        if !created {
+            let dest = downloadPath + "/reddit/.external/" + name
+            do {
+                try fm.createDirectory(atPath: dest, withIntermediateDirectories: false, attributes: nil)
+                try fm.createDirectory(atPath: dest + "/.json", withIntermediateDirectories: false, attributes: nil)
+                created = true
+                _ = RedditLoader.existingSubreddits.insert(name)
+            } catch _ {
+                
+            }
+        }
+        if !created {
+            let path = downloadPath.appending("/reddit/" + name)
+            if !fm.fileExists(atPath: path) {
+                try fm.createDirectory(atPath: path, withIntermediateDirectories: true, attributes: nil)
+                _ = RedditLoader.existingSubreddits.insert(name)
+                try fm.createDirectory(atPath: path + "/.json", withIntermediateDirectories: false, attributes: nil)
+            }
+        }
+        if offline {
+            return OfflineRedditLoader(name: name, session: session, external: external)
+        } else {
+            return RedditLoader(name: name, session: session, external: external)
+        }
+    }
 
     override func loadNextBatch(with url: URL, completion: @escaping ([EntityKind]) -> ()) {
         let downPath = self.cachePath + ".json"

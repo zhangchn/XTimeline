@@ -38,6 +38,11 @@
 		DB7358AE2212569300150E4C /* AddViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB7358AC2212568800150E4C /* AddViewController.swift */; };
 		DBD935C027D980C0005EA6F1 /* RedditDB.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234093277D926700E02D67 /* RedditDB.swift */; };
 		DBD935C127D980C8005EA6F1 /* RedditData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234095277D92C600E02D67 /* RedditData.swift */; };
+		DBD935C927E0628C005EA6F1 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBD935C827E0628C005EA6F1 /* main.swift */; };
+		DBD935CD27E062B3005EA6F1 /* AbstractEntityAndLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B97FD216A403F00A417AD /* AbstractEntityAndLoader.swift */; };
+		DBD935CE27E062BB005EA6F1 /* RedditLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B9804216A502100A417AD /* RedditLoader.swift */; };
+		DBD935CF27E062BF005EA6F1 /* RedditData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234095277D92C600E02D67 /* RedditData.swift */; };
+		DBD935D027E062C4005EA6F1 /* RedditDB.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234093277D926700E02D67 /* RedditDB.swift */; };
 		DBF1B76E27AE7D0200128E1D /* best.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = DBF1B76D27AE7D0200128E1D /* best.mlmodel */; };
 		DBF1B77027AEF1C500128E1D /* PlainDirLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF1B76F27AEF1C500128E1D /* PlainDirLoader.swift */; };
 		DBF2E577223D243700C2BA4D /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBF2E576223D243700C2BA4D /* AVKit.framework */; };
@@ -73,6 +78,18 @@
 			remoteInfo = "XTimeline-iOS";
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DBD935C427E0628A005EA6F1 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		DB14CC2D2766ED0A00ADCF0E /* DCGANLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DCGANLoader.swift; sourceTree = "<group>"; };
@@ -116,6 +133,8 @@
 		DB73589D22114F6A00150E4C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		DB7358A9221173FE00150E4C /* ThumbViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThumbViewController.swift; sourceTree = "<group>"; };
 		DB7358AC2212568800150E4C /* AddViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddViewController.swift; sourceTree = "<group>"; };
+		DBD935C627E0628A005EA6F1 /* XTimeCmd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = XTimeCmd; sourceTree = BUILT_PRODUCTS_DIR; };
+		DBD935C827E0628C005EA6F1 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		DBF1B76D27AE7D0200128E1D /* best.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = best.mlmodel; sourceTree = "<group>"; };
 		DBF1B76F27AEF1C500128E1D /* PlainDirLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainDirLoader.swift; sourceTree = "<group>"; };
 		DBF2E576223D243700C2BA4D /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
@@ -166,6 +185,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DBD935C327E0628A005EA6F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -186,6 +212,7 @@
 				DB1B97ED216A3F9500A417AD /* XTimelineUITests */,
 				DB73588F22114F6A00150E4C /* XTimeline-iOSTests */,
 				DB73589A22114F6A00150E4C /* XTimeline-iOSUITests */,
+				DBD935C727E0628C005EA6F1 /* XTimeCmd */,
 				DB1B97CE216A3F9200A417AD /* Products */,
 				DBF2E575223D243700C2BA4D /* Frameworks */,
 			);
@@ -200,6 +227,7 @@
 				DB73587722114F6900150E4C /* XTimeline-iOS.app */,
 				DB73588C22114F6A00150E4C /* XTimeline-iOSTests.xctest */,
 				DB73589722114F6A00150E4C /* XTimeline-iOSUITests.xctest */,
+				DBD935C627E0628A005EA6F1 /* XTimeCmd */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -296,6 +324,14 @@
 				DB73589D22114F6A00150E4C /* Info.plist */,
 			);
 			path = "XTimeline-iOSUITests";
+			sourceTree = "<group>";
+		};
+		DBD935C727E0628C005EA6F1 /* XTimeCmd */ = {
+			isa = PBXGroup;
+			children = (
+				DBD935C827E0628C005EA6F1 /* main.swift */,
+			);
+			path = XTimeCmd;
 			sourceTree = "<group>";
 		};
 		DBF2E575223D243700C2BA4D /* Frameworks */ = {
@@ -419,13 +455,30 @@
 			productReference = DB73589722114F6A00150E4C /* XTimeline-iOSUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		DBD935C527E0628A005EA6F1 /* XTimeCmd */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DBD935CA27E0628C005EA6F1 /* Build configuration list for PBXNativeTarget "XTimeCmd" */;
+			buildPhases = (
+				DBD935C227E0628A005EA6F1 /* Sources */,
+				DBD935C327E0628A005EA6F1 /* Frameworks */,
+				DBD935C427E0628A005EA6F1 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = XTimeCmd;
+			productName = XTimeCmd;
+			productReference = DBD935C627E0628A005EA6F1 /* XTimeCmd */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		DB1B97C5216A3F9200A417AD /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1010;
+				LastSwiftUpdateCheck = 1320;
 				LastUpgradeCheck = 1240;
 				ORGANIZATIONNAME = ZhangChen;
 				TargetAttributes = {
@@ -454,6 +507,9 @@
 						CreatedOnToolsVersion = 10.1;
 						TestTargetID = DB73587622114F6900150E4C;
 					};
+					DBD935C527E0628A005EA6F1 = {
+						CreatedOnToolsVersion = 13.2;
+					};
 				};
 			};
 			buildConfigurationList = DB1B97C8216A3F9200A417AD /* Build configuration list for PBXProject "XTimeline" */;
@@ -475,6 +531,7 @@
 				DB73587622114F6900150E4C /* XTimeline-iOS */,
 				DB73588B22114F6A00150E4C /* XTimeline-iOSTests */,
 				DB73589622114F6A00150E4C /* XTimeline-iOSUITests */,
+				DBD935C527E0628A005EA6F1 /* XTimeCmd */,
 			);
 		};
 /* End PBXProject section */
@@ -596,6 +653,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				DB73589C22114F6A00150E4C /* XTimeline_iOSUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DBD935C227E0628A005EA6F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DBD935C927E0628C005EA6F1 /* main.swift in Sources */,
+				DBD935CF27E062BF005EA6F1 /* RedditData.swift in Sources */,
+				DBD935CD27E062B3005EA6F1 /* AbstractEntityAndLoader.swift in Sources */,
+				DBD935D027E062C4005EA6F1 /* RedditDB.swift in Sources */,
+				DBD935CE27E062BB005EA6F1 /* RedditLoader.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1026,6 +1095,32 @@
 			};
 			name = Release;
 		};
+		DBD935CB27E0628C005EA6F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BM2FS8LWK3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.6;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		DBD935CC27E0628C005EA6F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BM2FS8LWK3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.6;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1088,6 +1183,15 @@
 			buildConfigurations = (
 				DB7358A222114F6A00150E4C /* Debug */,
 				DB7358A322114F6A00150E4C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DBD935CA27E0628C005EA6F1 /* Build configuration list for PBXNativeTarget "XTimeCmd" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DBD935CB27E0628C005EA6F1 /* Debug */,
+				DBD935CC27E0628C005EA6F1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
