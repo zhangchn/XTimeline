@@ -43,6 +43,7 @@
 		DBD935CE27E062BB005EA6F1 /* RedditLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B9804216A502100A417AD /* RedditLoader.swift */; };
 		DBD935CF27E062BF005EA6F1 /* RedditData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234095277D92C600E02D67 /* RedditData.swift */; };
 		DBD935D027E062C4005EA6F1 /* RedditDB.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234093277D926700E02D67 /* RedditDB.swift */; };
+		DBD935D227E31F64005EA6F1 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBD935D127E31F63005EA6F1 /* Foundation.framework */; platformFilter = maccatalyst; };
 		DBF1B76E27AE7D0200128E1D /* best.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = DBF1B76D27AE7D0200128E1D /* best.mlmodel */; };
 		DBF1B77027AEF1C500128E1D /* PlainDirLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF1B76F27AEF1C500128E1D /* PlainDirLoader.swift */; };
 		DBF2E577223D243700C2BA4D /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DBF2E576223D243700C2BA4D /* AVKit.framework */; };
@@ -135,6 +136,7 @@
 		DB7358AC2212568800150E4C /* AddViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddViewController.swift; sourceTree = "<group>"; };
 		DBD935C627E0628A005EA6F1 /* XTimeCmd */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = XTimeCmd; sourceTree = BUILT_PRODUCTS_DIR; };
 		DBD935C827E0628C005EA6F1 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		DBD935D127E31F63005EA6F1 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		DBF1B76D27AE7D0200128E1D /* best.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; path = best.mlmodel; sourceTree = "<group>"; };
 		DBF1B76F27AEF1C500128E1D /* PlainDirLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlainDirLoader.swift; sourceTree = "<group>"; };
 		DBF2E576223D243700C2BA4D /* AVKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVKit.framework; path = System/Library/Frameworks/AVKit.framework; sourceTree = SDKROOT; };
@@ -189,6 +191,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DBD935D227E31F64005EA6F1 /* Foundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -337,6 +340,7 @@
 		DBF2E575223D243700C2BA4D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				DBD935D127E31F63005EA6F1 /* Foundation.framework */,
 				DB14CC3327671B8100ADCF0E /* libz.tbd */,
 				DBF2E576223D243700C2BA4D /* AVKit.framework */,
 			);
