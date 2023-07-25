@@ -57,6 +57,13 @@ fileprivate func entities(from children: [ChildData], url pageUrl: URL?, after: 
             return []
         }
         if d.isRedditMediaDomain ?? false, let url = d.url, let domain = d.domain, domain.hasSuffix(".redd.it") || domain.hasSuffix(".redditmedia.com") {
+            if url.hasSuffix(".gif") {
+                if let variants = d.preview?.images?.first?.variants {
+                    if let mp4 = variants["mp4"], let sourceUrl = mp4.source?.url {
+                        return [(sourceUrl, d)]
+                    }
+                }
+            }
             if domain.hasSuffix("v.redd.it"), let videoPreview = d.media?.redditVideo {
                 if let url = videoPreview.fallbackUrl ?? videoPreview.scrubberMediaUrl {
                     return [(url, d)]
@@ -293,7 +300,7 @@ class RedditLoader: AbstractImageLoader {
         // Note: Such configuration requires that .redd.it domains added to /etc/hosts
 //        let useRedditSession = false // url.host!.hasSuffix(".redd.it") ||
 //            url.host!.hasSuffix(".redditmedia.com")
-        let useRedditSession = url.host!.hasSuffix(".redd.it") 
+        let useRedditSession = false // url.host!.hasSuffix(".redd.it") 
         let s = useRedditSession ? redditSession : session
         //let fileName = url.lastPathComponent
         let isVideoTask = url.pathExtension == "mp4" || url.pathExtension == "gif"
@@ -598,4 +605,73 @@ final class OfflineRedditLoader: RedditLoader {
         }
     }
  */
+}
+
+
+
+final class RemoteRedditLoader: RedditLoader {
+    let remoteService: URL
+    init(remoteService: URL, session: URLSession) {
+        self.remoteService = remoteService
+        let name = remoteService.query?.split(separator: "&").map({ $0.split(separator: "=") }).first(where: { $0[0] == "s" })?.last ?? "_default"
+        
+        super.init(name: String(name), session: session)
+    }
+    
+    override func loadFirstPage(completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
+        loadNextBatch(with: self.remoteService, completion: completion)
+    }
+    
+    override func loadNextBatch(with url: URL, completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
+        let task = session.dataTask(with: url) { (d, r, e) in
+            if let err = e {
+                print(err)
+                return completion([])
+            }
+            guard let data = d else { return completion([]) }
+            let decoder = JSONDecoder()
+            do {
+                let doc = try decoder.decode(SubredditRemotePage.self, from: data)
+                var result = [RedditLoader.EntityKind]()
+                for m in doc.media {
+                    let attr = [
+                        "title": m.title,
+                        "author": m.author,
+                        "text": m.text
+                    ]
+                    result.append(.placeHolder((m.url, false, attr)))
+                }
+                if let n = doc.next {
+                    result.append(.batchPlaceHolder((n, false)))
+                }
+                completion(result)
+            } catch let err {
+                print(err)
+                return completion([])
+            }
+        }
+        task.resume()
+    }
+    override func loadCachedPlaceHolder(with url: URL, attributes: [String : Any]) -> RedditLoader.EntityKind? {
+        return nil
+    }
+    
+    override func loadPlaceHolder(with url: URL, cacheFileUrl: URL?, attributes: [String : Any], completion: @escaping ([RedditLoader.EntityKind]) -> ()) {
+        let task = session.downloadTask(with: url) { u, r, e in
+            if let e = e {
+                print(e)
+                return
+            }
+            if let fileUrl = u {
+                do {
+                    let dest = self.fileManager.temporaryDirectory.appendingPathComponent(url.lastPathComponent)
+                    try self.fileManager.moveItem(at: fileUrl, to: dest)
+                    return completion([RedditLoader.EntityKind.image((url, dest, attributes))])
+                } catch let e {
+                    print(e)
+                }
+            }
+        }
+        task.resume()
+    }
 }

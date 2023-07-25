@@ -538,8 +538,8 @@ class ViewController: NSViewController {
     func setUpRedditLoader(name: String, offline: Bool = false) {
         self.name = name
         self.view.window?.title = name
-        try {
-            loader = RedditLoader.setUpRedditLoader(name: name, session: session, offline: offline)
+        do {
+            loader = try RedditLoader.setUpRedditLoader(name: name, session: session, offline: offline)
         } catch let err {
             let alert = NSAlert(error: err)
             alert.beginSheetModal(for: self.view.window!) { (resp) in

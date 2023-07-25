@@ -22,6 +22,12 @@
 		DB1B9805216A502100A417AD /* RedditLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB1B9804216A502100A417AD /* RedditLoader.swift */; };
 		DB234094277D926700E02D67 /* RedditDB.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234093277D926700E02D67 /* RedditDB.swift */; };
 		DB234096277D92C600E02D67 /* RedditData.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB234095277D92C600E02D67 /* RedditData.swift */; };
+		DB3CBA0827FEC5C6007AE6DA /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB3CBA0727FEC5C6007AE6DA /* main.swift */; };
+		DB3CBA0E27FECA9E007AE6DA /* NIOCore in Frameworks */ = {isa = PBXBuildFile; productRef = DB3CBA0D27FECA9E007AE6DA /* NIOCore */; };
+		DB3CBA1027FECA9E007AE6DA /* NIOHTTP1 in Frameworks */ = {isa = PBXBuildFile; productRef = DB3CBA0F27FECA9E007AE6DA /* NIOHTTP1 */; };
+		DB3CBA1227FECAAC007AE6DA /* NIOHTTP1 in Frameworks */ = {isa = PBXBuildFile; productRef = DB3CBA1127FECAAC007AE6DA /* NIOHTTP1 */; };
+		DB3CBA1427FECCC7007AE6DA /* NIO in Frameworks */ = {isa = PBXBuildFile; productRef = DB3CBA1327FECCC7007AE6DA /* NIO */; };
+		DB3CBA1627FECCCF007AE6DA /* NIOCore in Frameworks */ = {isa = PBXBuildFile; productRef = DB3CBA1527FECCCF007AE6DA /* NIOCore */; };
 		DB5B4D3B27C2848E003BDA41 /* DetectionObservationCompositor.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB5B4D3A27C2848E003BDA41 /* DetectionObservationCompositor.swift */; };
 		DB5D22A2217C6249002B98CB /* OpenViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB5D22A1217C6249002B98CB /* OpenViewController.swift */; };
 		DB73587A22114F6900150E4C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB73587922114F6900150E4C /* AppDelegate.swift */; };
@@ -81,6 +87,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		DB3CBA0327FEC5C5007AE6DA /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		DBD935C427E0628A005EA6F1 /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -116,6 +131,8 @@
 		DB1B9804216A502100A417AD /* RedditLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditLoader.swift; sourceTree = "<group>"; };
 		DB234093277D926700E02D67 /* RedditDB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditDB.swift; sourceTree = "<group>"; };
 		DB234095277D92C600E02D67 /* RedditData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RedditData.swift; sourceTree = "<group>"; };
+		DB3CBA0527FEC5C5007AE6DA /* XTimeSrv */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = XTimeSrv; sourceTree = BUILT_PRODUCTS_DIR; };
+		DB3CBA0727FEC5C6007AE6DA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		DB5B4D3A27C2848E003BDA41 /* DetectionObservationCompositor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DetectionObservationCompositor.swift; sourceTree = "<group>"; };
 		DB5D22A1217C6249002B98CB /* OpenViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenViewController.swift; sourceTree = "<group>"; };
 		DB73587722114F6900150E4C /* XTimeline-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "XTimeline-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -147,8 +164,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DB3CBA0E27FECA9E007AE6DA /* NIOCore in Frameworks */,
 				DB14CC322766FCE900ADCF0E /* SwiftNpy in Frameworks */,
 				DBF2E577223D243700C2BA4D /* AVKit.framework in Frameworks */,
+				DB3CBA1027FECA9E007AE6DA /* NIOHTTP1 in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -163,6 +182,16 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DB3CBA0227FEC5C5007AE6DA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DB3CBA1627FECCCF007AE6DA /* NIOCore in Frameworks */,
+				DB3CBA1227FECAAC007AE6DA /* NIOHTTP1 in Frameworks */,
+				DB3CBA1427FECCC7007AE6DA /* NIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -216,6 +245,7 @@
 				DB73588F22114F6A00150E4C /* XTimeline-iOSTests */,
 				DB73589A22114F6A00150E4C /* XTimeline-iOSUITests */,
 				DBD935C727E0628C005EA6F1 /* XTimeCmd */,
+				DB3CBA0627FEC5C6007AE6DA /* XTimeSrv */,
 				DB1B97CE216A3F9200A417AD /* Products */,
 				DBF2E575223D243700C2BA4D /* Frameworks */,
 			);
@@ -231,6 +261,7 @@
 				DB73588C22114F6A00150E4C /* XTimeline-iOSTests.xctest */,
 				DB73589722114F6A00150E4C /* XTimeline-iOSUITests.xctest */,
 				DBD935C627E0628A005EA6F1 /* XTimeCmd */,
+				DB3CBA0527FEC5C5007AE6DA /* XTimeSrv */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -293,6 +324,14 @@
 				DBF1B76F27AEF1C500128E1D /* PlainDirLoader.swift */,
 			);
 			path = Loaders;
+			sourceTree = "<group>";
+		};
+		DB3CBA0627FEC5C6007AE6DA /* XTimeSrv */ = {
+			isa = PBXGroup;
+			children = (
+				DB3CBA0727FEC5C6007AE6DA /* main.swift */,
+			);
+			path = XTimeSrv;
 			sourceTree = "<group>";
 		};
 		DB73587822114F6900150E4C /* iOS */ = {
@@ -365,6 +404,8 @@
 			name = XTimeline;
 			packageProductDependencies = (
 				DB14CC312766FCE900ADCF0E /* SwiftNpy */,
+				DB3CBA0D27FECA9E007AE6DA /* NIOCore */,
+				DB3CBA0F27FECA9E007AE6DA /* NIOHTTP1 */,
 			);
 			productName = XTimeline;
 			productReference = DB1B97CD216A3F9200A417AD /* XTimeline.app */;
@@ -405,6 +446,28 @@
 			productName = XTimelineUITests;
 			productReference = DB1B97EA216A3F9500A417AD /* XTimelineUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		DB3CBA0427FEC5C5007AE6DA /* XTimeSrv */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DB3CBA0B27FEC5C6007AE6DA /* Build configuration list for PBXNativeTarget "XTimeSrv" */;
+			buildPhases = (
+				DB3CBA0127FEC5C5007AE6DA /* Sources */,
+				DB3CBA0227FEC5C5007AE6DA /* Frameworks */,
+				DB3CBA0327FEC5C5007AE6DA /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = XTimeSrv;
+			packageProductDependencies = (
+				DB3CBA1127FECAAC007AE6DA /* NIOHTTP1 */,
+				DB3CBA1327FECCC7007AE6DA /* NIO */,
+				DB3CBA1527FECCCF007AE6DA /* NIOCore */,
+			);
+			productName = XTimeSrv;
+			productReference = DB3CBA0527FEC5C5007AE6DA /* XTimeSrv */;
+			productType = "com.apple.product-type.tool";
 		};
 		DB73587622114F6900150E4C /* XTimeline-iOS */ = {
 			isa = PBXNativeTarget;
@@ -500,6 +563,9 @@
 						LastSwiftMigration = 1020;
 						TestTargetID = DB1B97CC216A3F9200A417AD;
 					};
+					DB3CBA0427FEC5C5007AE6DA = {
+						CreatedOnToolsVersion = 13.2;
+					};
 					DB73587622114F6900150E4C = {
 						CreatedOnToolsVersion = 10.1;
 					};
@@ -525,6 +591,9 @@
 				Base,
 			);
 			mainGroup = DB1B97C4216A3F9200A417AD;
+			packageReferences = (
+				DB3CBA0C27FECA9E007AE6DA /* XCRemoteSwiftPackageReference "swift-nio" */,
+			);
 			productRefGroup = DB1B97CE216A3F9200A417AD /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -536,6 +605,7 @@
 				DB73588B22114F6A00150E4C /* XTimeline-iOSTests */,
 				DB73589622114F6A00150E4C /* XTimeline-iOSUITests */,
 				DBD935C527E0628A005EA6F1 /* XTimeCmd */,
+				DB3CBA0427FEC5C5007AE6DA /* XTimeSrv */,
 			);
 		};
 /* End PBXProject section */
@@ -625,6 +695,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				DB1B97EF216A3F9500A417AD /* XTimelineUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DB3CBA0127FEC5C5007AE6DA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DB3CBA0827FEC5C6007AE6DA /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -960,6 +1038,32 @@
 			};
 			name = Release;
 		};
+		DB3CBA0927FEC5C6007AE6DA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BM2FS8LWK3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.6;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		DB3CBA0A27FEC5C6007AE6DA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = BM2FS8LWK3;
+				ENABLE_HARDENED_RUNTIME = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.6;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
 		DB73589E22114F6A00150E4C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1164,6 +1268,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		DB3CBA0B27FEC5C6007AE6DA /* Build configuration list for PBXNativeTarget "XTimeSrv" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DB3CBA0927FEC5C6007AE6DA /* Debug */,
+				DB3CBA0A27FEC5C6007AE6DA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		DB7358A422114F6A00150E4C /* Build configuration list for PBXNativeTarget "XTimeline-iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1202,10 +1315,46 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		DB3CBA0C27FECA9E007AE6DA /* XCRemoteSwiftPackageReference "swift-nio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-nio.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		DB14CC312766FCE900ADCF0E /* SwiftNpy */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = SwiftNpy;
+		};
+		DB3CBA0D27FECA9E007AE6DA /* NIOCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DB3CBA0C27FECA9E007AE6DA /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOCore;
+		};
+		DB3CBA0F27FECA9E007AE6DA /* NIOHTTP1 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DB3CBA0C27FECA9E007AE6DA /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOHTTP1;
+		};
+		DB3CBA1127FECAAC007AE6DA /* NIOHTTP1 */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DB3CBA0C27FECA9E007AE6DA /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOHTTP1;
+		};
+		DB3CBA1327FECCC7007AE6DA /* NIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DB3CBA0C27FECA9E007AE6DA /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIO;
+		};
+		DB3CBA1527FECCCF007AE6DA /* NIOCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DB3CBA0C27FECA9E007AE6DA /* XCRemoteSwiftPackageReference "swift-nio" */;
+			productName = NIOCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

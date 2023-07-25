@@ -43,15 +43,15 @@ struct SubredditPage : Codable {
         let duration: Int?
     }
     struct Preview: Codable {
+        struct Source: Codable {
+            let url: String?
+            let width: Int
+            let height: Int
+        }
         struct Image: Codable {
-            struct Source: Codable {
-                let url: String?
-                let width: Int
-                let height: Int
-            }
             let source: Source?
             let resolutions: [Source]?
-            
+            let variants: [String: Image]?            
         }
         let images: [Preview.Image]?
         let redditVideoPreview: VideoPreview?
@@ -83,4 +83,16 @@ struct SubredditPage : Codable {
     }
     let data: DataObj
     let url: String?
+}
+
+struct SubredditRemotePage : Codable {
+    struct Media: Codable {
+        let mime: String
+        let url: URL
+        let title: String
+        let author: String
+        let text: String
+    }
+    let next: URL?
+    let media: [Media]
 }
